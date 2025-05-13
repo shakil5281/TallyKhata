@@ -2,88 +2,103 @@ import React, { useEffect, useState } from 'react';
 import { View, FlatList, Text, Alert, StyleSheet, TouchableOpacity } from 'react-native';
 import { Button, Card, Appbar, IconButton } from 'react-native-paper';
 import { useRouter } from 'expo-router';
-import { getCustomerTransactions, initDB, deleteTransaction } from '~/lib/db';
+import { getCustomers, getCustomerTransactions, initDB } from '~/lib/db';
 import { useLocalSearchParams } from 'expo-router';
 import * as FileSystem from 'expo-file-system';
-import { captureScreen } from 'react-native-view-shot';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 
 export default function CustomerTransactionScreen() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [offset, setOffset] = useState(0); // Pagination offset
   const [limit] = useState(10); // Limit number of transactions per fetch
-  const [userName, setUserName] = useState('John Doe'); // Hardcoded for now; you can fetch from user data
+  const [userName, setUserName] = useState<string>(''); // To store customer name
   const router = useRouter();
-  const { id } = useLocalSearchParams();
+  const { id } = useLocalSearchParams(); // Get the customer id from the route params
 
   useEffect(() => {
-    const loadTransactions = async () => {
+    const loadTransactionsAndCustomerName = async () => {
       setLoading(true);
       await initDB();
       if (id) {
+        // Fetch transactions
         const result = await getCustomerTransactions(Number(id), limit, offset);
         setTransactions((prev) => [...prev, ...result]); // Append results
+
+        // Fetch customer name
+        const customers = await getCustomers(); // Get all customers
+        const customer = customers.find((customer: any) => customer.id === Number(id)); // Find the specific customer
+        if (customer) {
+          // @ts-ignore
+          setUserName(customer.name); // Set the customer name
+        }
       }
       setLoading(false);
     };
-    loadTransactions();
+
+    loadTransactionsAndCustomerName();
   }, [id, offset]);
 
-  const handleDeleteTransaction = async (transactionId: number) => {
-    Alert.alert(
-      'Delete Transaction',
-      'Are you sure you want to delete this transaction?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          onPress: async () => {
-            await deleteTransaction(transactionId);
-            setTransactions((prevTransactions) =>
-              prevTransactions.filter((txn) => txn.id !== transactionId)
-            );
-          },
-        },
-      ]
-    );
-  };
-
-  const loadMoreTransactions = () => {
-    setOffset((prevOffset) => prevOffset + limit); // Increase the offset to load more
-  };
-
-  const downloadPDF = async () => {
+  // Function to generate and download PDF
+  const generatePDF = async () => {
     try {
-      const uri = await captureScreen({
-        format: 'png',
-        quality: 0.8,
+      const htmlContent = `
+        <h1>Transactions for ${userName}</h1>
+        <table border="1" cellpadding="10" cellspacing="0" style="width: 100%; margin-top: 20px; text-align: left;">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Note</th>
+              <th>Amount</th>
+              <th>Type</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${transactions
+              .map(
+                (txn: any) => `
+                <tr>
+                  <td>${txn.date}</td>
+                  <td>${txn.note}</td>
+                  <td>${txn.amount}</td>
+                  <td>${txn.type === 'credit' ? 'Credit' : 'Debit'}</td>
+                </tr>
+              `
+              )
+              .join('')}
+          </tbody>
+        </table>
+      `;
+
+      // Generate PDF from HTML content
+      const { uri } = await Print.printToFileAsync({
+        html: htmlContent,
+        base64: false,
       });
-      const fileUri = FileSystem.documentDirectory + 'transactions.png';
-      await FileSystem.moveAsync({
-        from: uri,
-        to: fileUri,
-      });
-      Alert.alert('Success', 'PDF saved successfully!');
+
+      console.log('PDF generated at: ', uri);
+
+      // Share the generated PDF
+      await Sharing.shareAsync(uri);
+
     } catch (error) {
-      console.error('Error capturing screen:', error);
-      Alert.alert('Error', 'Failed to capture screen');
+      console.error('Error generating PDF:', error);
     }
   };
 
   return (
     <>
       {/* Header */}
-      <Appbar.Header style={styles.header}>
-        <Appbar.Content title={userName} titleStyle={styles.headerTitle} />
-        <IconButton
+      <Appbar.Header style={{ backgroundColor: '#fe4c24' }}>
+        <Appbar.BackAction color='white' onPress={() => router.back()} />
+        <Appbar.Content title={userName || 'Loading...'} titleStyle={styles.headerTitle} />
+        <Appbar.Action
           icon="download"
-          // color="white"
-          size={24}
-          onPress={downloadPDF}
-        />
+          color='white'
+          onPress={generatePDF}
+          style={styles.downloadButtonContainer}
+          />
       </Appbar.Header>
 
       {/* Main content */}
@@ -103,32 +118,15 @@ export default function CustomerTransactionScreen() {
           renderItem={({ item }) => (
             <Card style={styles.card}>
               <View style={styles.row}>
+                <Text style={styles.tableCell}>{item.date}</Text>
                 <Text style={styles.tableCell}>{item.note}</Text>
                 <Text style={[styles.tableCell, item.type === 'credit' ? styles.credit : styles.debit]}>
                   ৳{item.amount}
                 </Text>
                 <Text style={styles.tableCell}>{item.type === 'credit' ? 'Credit' : 'Debit'}</Text>
-                <Text style={styles.tableCell}>{item.date}</Text>
-                <Button
-                  mode="outlined"
-                  onPress={() => handleDeleteTransaction(item.id)}
-                  style={styles.deleteButton}
-                >
-                  Delete
-                </Button>
               </View>
             </Card>
           )}
-          ListFooterComponent={
-            <Button
-              mode="contained"
-              onPress={loadMoreTransactions}
-              style={styles.loadMoreButton}
-              disabled={loading}
-            >
-              {loading ? 'Loading...' : 'Load More'}
-            </Button>
-          }
         />
 
         {/* Floating Add Button */}
@@ -148,9 +146,6 @@ export default function CustomerTransactionScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    backgroundColor: '#2563eb',
-  },
   headerTitle: {
     color: 'white',
     fontWeight: 'bold',
@@ -168,11 +163,18 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   card: {
-    marginBottom: 15,
-    padding: 10,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    elevation: 3,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    marginBottom: 10,
+    padding: 15,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
   },
   row: {
     flexDirection: 'row',
@@ -190,23 +192,22 @@ const styles = StyleSheet.create({
   credit: {
     color: '#4CAF50', // Green for credit
   },
-  deleteButton: {
-    marginLeft: 10,
-    backgroundColor: '#FF5252',
-  },
-  loadMoreButton: {
-    marginTop: 20,
-    backgroundColor: '#4CAF50',
-  },
   floatingButtonContainer: {
     position: 'absolute',
     bottom: 24,
     right: 24,
   },
   floatingButton: {
-    backgroundColor: '#FF5722',
-    borderRadius: 50,
-    padding: 10,
-    elevation: 5,
+    backgroundColor: 'red',
+    borderRadius: 30,
+    padding: 6,
+    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+    fontSize: 20,
+  },
+  downloadButtonContainer: {
+    marginTop: 20,
+  },
+  downloadButton: {
+    backgroundColor: '#4CAF50',
   },
 });

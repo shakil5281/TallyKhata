@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, KeyboardAvoidingView, Platform } from 'react-native';
 import { Appbar, Avatar, Button, TextInput, Card, Text, RadioButton } from 'react-native-paper';
 import { useRouter } from 'expo-router';
-import { addCustomer, dropCustomersTable, initDB } from '~/lib/db';
+import { addCustomer, clearAndDropTables, clearTables, dropCustomersTable, dropTables, initDB } from '~/lib/db';
 
 export default function AddCustomerScreen() {
   const [name, setName] = useState('');
@@ -24,6 +24,9 @@ export default function AddCustomerScreen() {
   // useEffect(() => {
   //   dropCustomersTable().then(() => {
   //     initDB(); // Recreate with correct columns
+  //     dropTables();
+  //     clearTables();
+  //     clearAndDropTables()
   //   });
   // }, []);
 
@@ -32,7 +35,7 @@ export default function AddCustomerScreen() {
     <>
       {/* Header */}
       <Appbar.Header style={{ backgroundColor: '#2563eb' }}>
-        <Appbar.BackAction onPress={() => router.back()} color="white" />
+        <Appbar.BackAction onPress={() => router.push('/')} color="white" />
         <Appbar.Content
           title="Add Customer"
           titleStyle={{ color: 'white', fontWeight: 'bold' }}

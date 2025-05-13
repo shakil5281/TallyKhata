@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text } from 'react-native';
-import { Button, RadioButton , TextInput} from 'react-native-paper';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { Appbar, Button, RadioButton, TextInput } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { addTransaction, getCustomerTransactions, initDB } from '~/lib/db';
 import { useLocalSearchParams } from 'expo-router';
@@ -29,8 +29,8 @@ export default function AddTransactionScreen() {
       // Fetch transaction details and populate form fields
       const loadTransaction = async () => {
         await initDB();
-        const transaction = await getCustomerTransactions(Number(id));
-        const txn:any = transaction.find((txn:any) => txn.id === Number(transactionId));
+        const transaction = await getCustomerTransactions(Number(id), Number(transactionId), Number(id));
+        const txn: any = transaction.find((txn: any) => txn.id === Number(transactionId));
         if (txn) {
           setAmount(txn.amount.toString());
           setNote(txn.note || '');
@@ -42,28 +42,75 @@ export default function AddTransactionScreen() {
   }, [transactionId]);
 
   return (
-    <View className="p-4 flex-1">
+<>
+    <Appbar.Header style={{ backgroundColor: '#fe4c24' }}>
+      <Appbar.BackAction color='white' onPress={() => router.push('/')} />
+      <Appbar.Content color='white' title={transactionId ? 'Edit Transaction' : 'Add Transaction'} />
+      <Appbar.Action color='white' icon="check" onPress={handleSaveTransaction} />
+    </Appbar.Header>
+    <ScrollView contentContainerStyle={styles.container}>
       <TextInput
         label="Amount"
         value={amount}
         onChangeText={setAmount}
         keyboardType="numeric"
-        className="mb-4"
+        style={styles.input}
+        mode="outlined"
+        placeholder="Enter transaction amount"
       />
       <TextInput
         label="Note (Optional)"
         value={note}
         onChangeText={setNote}
-        className="mb-4"
+        style={styles.input}
+        mode="outlined"
+        placeholder="Add a note (optional)"
       />
-      <Text className="mb-4">Transaction Type</Text>
+      <Text style={styles.transactionTypeLabel}>Transaction Type</Text>
       <RadioButton.Group onValueChange={setType} value={type}>
         <RadioButton.Item label="Credit" value="credit" />
         <RadioButton.Item label="Debit" value="debit" />
       </RadioButton.Group>
-      <Button mode="contained" onPress={handleSaveTransaction}>
+      <Button
+        mode="contained"
+        onPress={handleSaveTransaction}
+        style={styles.submitButton}
+        labelStyle={styles.submitButtonText}
+      >
         {transactionId ? 'Update Transaction' : 'Add Transaction'}
       </Button>
-    </View>
+    </ScrollView>
+</>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flexGrow: 1,
+    padding: 20,
+    backgroundColor: '#f9f9f9',
+  },
+  input: {
+    marginBottom: 15,
+    backgroundColor: 'white',
+  },
+  transactionTypeLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: 10,
+  },
+  radioGroup: {
+    marginBottom: 15,
+  },
+  submitButton: {
+    marginTop: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: '#fe4c24', // Button background color
+  },
+  submitButtonText: {
+    fontSize: 16,
+    color: 'white',
+  },
+});
