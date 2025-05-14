@@ -67,9 +67,9 @@ export default function AddTransactionScreen() {
         placeholder="Add a note (optional)"
       />
       <Text style={styles.transactionTypeLabel}>Transaction Type</Text>
-      <RadioButton.Group onValueChange={setType} value={type}>
-        <RadioButton.Item label="Credit" value="credit" />
-        <RadioButton.Item label="Debit" value="debit" />
+      <RadioButton.Group  onValueChange={setType} value={type}>
+        <RadioButton.Item color='#fe4c24' label="Credit" value="credit" />
+        <RadioButton.Item color='#fe4c24' label="Debit" value="debit" />
       </RadioButton.Group>
       <Button
         mode="contained"

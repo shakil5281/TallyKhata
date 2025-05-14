@@ -3,33 +3,34 @@ import { View, FlatList, Text, StyleSheet, TouchableOpacity } from 'react-native
 import { Appbar, Button, Card, Avatar, IconButton } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { getCustomers, initDB } from '~/lib/db';
+import { StatusBar } from 'expo-status-bar';
 
 export default function HomeScreen() {
     const [customers, setCustomers] = useState<any[]>([]);
     const [activeCard, setActiveCard] = useState<string | null>(null); // Track active card
     const router = useRouter();
-      const [loading, setLoading] = useState<boolean>(true);
+    const [loading, setLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    const loadCustomers = async () => {
-      try {
-        // Initialize DB (only once)
-        await initDB();
-        
-        // Fetch customers after DB initialization
-        const result = await getCustomers();
-        
-        // Set the customer data into state
-        setCustomers(result);
-      } catch (error) {
-        console.error("Error loading customers:", error);
-      } finally {
-        setLoading(false); // Once the data is loaded, set loading to false
-      }
-    };
+    useEffect(() => {
+        const loadCustomers = async () => {
+            try {
+                // Initialize DB (only once)
+                await initDB();
 
-    loadCustomers(); // Call the async function
-  }, []);
+                // Fetch customers after DB initialization
+                const result = await getCustomers();
+
+                // Set the customer data into state
+                setCustomers(result);
+            } catch (error) {
+                console.error("Error loading customers:", error);
+            } finally {
+                setLoading(false); // Once the data is loaded, set loading to false
+            }
+        };
+
+        loadCustomers(); // Call the async function
+    }, []);
 
     const handlePressIn = (id: string) => {
         setActiveCard(id); // Mark card as active
@@ -62,7 +63,7 @@ export default function HomeScreen() {
                             {...props}
                             label={item.name ? item.name.charAt(0).toUpperCase() : '?'}
                             color="white"
-                            style={{ backgroundColor: '#3b82f6' }} // Tailwind blue-500
+                            style={{ backgroundColor: '#fe4c24' }} // Tailwind blue-500
                         />
                     )}
                     right={(props) => (
@@ -111,6 +112,7 @@ export default function HomeScreen() {
                     Add Customer
                 </Button>
             </View>
+            <StatusBar style="light" />
         </>
     );
 }

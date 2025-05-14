@@ -160,3 +160,85 @@ export const clearAndDropTables = async () => {
     console.error('Failed to clear or drop tables:', err);
   }
 };
+
+
+// --- at the end of your db.ts file:
+
+// Shape of a returned transaction
+export type Transaction = {
+  id: number;
+  customer_id: number;
+  type: 'credit' | 'debit';
+  amount: number;
+  description: string | null;
+  date: string;
+};
+
+// 1. Get ALL transactions
+export const getAllTransactions = async (): Promise<Transaction[]> => {
+  if (!db) await initDB();
+  return await db.getAllAsync(
+    `SELECT 
+       id, 
+       customer_id, 
+       type, 
+       amount, 
+       note    AS description, 
+       date 
+     FROM transactions 
+     ORDER BY date DESC;`
+  );
+};
+
+// 2. Get transactions with optional filters
+export const getAllTransactionsFiltered = async (filters: {
+  customerId?: number;
+  type?: 'credit' | 'debit';
+  startDate?: string;   // format: 'YYYY-MM-DD'
+  endDate?: string;     // format: 'YYYY-MM-DD'
+  limit?: number;
+  offset?: number;
+} = {}): Promise<Transaction[]> => {
+  if (!db) await initDB();
+
+  const clauses: string[] = [];
+  const params: any[]    = [];
+
+  if (filters.customerId != null) {
+    clauses.push(`customer_id = ?`);
+    params.push(filters.customerId);
+  }
+  if (filters.type) {
+    clauses.push(`type = ?`);
+    params.push(filters.type);
+  }
+  if (filters.startDate) {
+    clauses.push(`date(date) >= date(?)`);
+    params.push(filters.startDate);
+  }
+  if (filters.endDate) {
+    clauses.push(`date(date) <= date(?)`);
+    params.push(filters.endDate);
+  }
+
+  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  let limitOffset = '';
+  if (filters.limit != null)  limitOffset += ` LIMIT ${filters.limit}`;
+  if (filters.offset != null) limitOffset += ` OFFSET ${filters.offset}`;
+
+  const sql = `
+    SELECT 
+      id, 
+      customer_id, 
+      type, 
+      amount, 
+      note    AS description, 
+      date 
+    FROM transactions
+    ${where}
+    ORDER BY date DESC
+    ${limitOffset};
+  `;
+
+  return await db.getAllAsync(sql, params);
+};

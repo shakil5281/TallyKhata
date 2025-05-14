@@ -34,7 +34,7 @@ export default function AddCustomerScreen() {
   return (
     <>
       {/* Header */}
-      <Appbar.Header style={{ backgroundColor: '#2563eb' }}>
+      <Appbar.Header style={{ backgroundColor: '#fe4c24' }}>
         <Appbar.BackAction onPress={() => router.push('/')} color="white" />
         <Appbar.Content
           title="Add Customer"
@@ -45,15 +45,16 @@ export default function AddCustomerScreen() {
       {/* Body */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        className="flex-1 bg-gray-100 p-4"
+        className="flex-1 p-4"
       >
-        <Card className="rounded-xl shadow-md bg-white p-5">
+        <Card className="rounded-xl shadow-md  p-5">
           <View className="items-center mb-6">
             <Avatar.Image
+              style={{ backgroundColor: '#fe4c24' }}
               size={72}
               source={require('../../assets/user-avater.png')} // Replace with your own image
             />
-            <Text className="mt-2 text-base font-semibold text-gray-700">
+            <Text className="mt-2 text-base font-semibold ">
               Add New Contact
             </Text>
           </View>
@@ -64,8 +65,8 @@ export default function AddCustomerScreen() {
               value={name}
               onChangeText={setName}
               mode="outlined"
-
               style={{ fontSize: 14 }}
+              className=''
             />
             <TextInput
               label="Phone (e.g. 017XXXXXXXX)"
@@ -73,7 +74,6 @@ export default function AddCustomerScreen() {
               onChangeText={setPhone}
               mode="outlined"
               keyboardType="number-pad"
-
               style={{ fontSize: 14 }}
               error={!!phone && !isValidPhone(phone)}
             />
@@ -81,9 +81,9 @@ export default function AddCustomerScreen() {
             <View>
 
               <Text className="mt-2 mb-1 font-medium text-gray-600">Type</Text>
-              <RadioButton.Group onValueChange={(value) => setType(value as any)} value={type}>
+              <RadioButton.Group  onValueChange={(value) => setType(value as any)} value={type}>
                 <View className="flex-row items-center mb-1">
-                  <RadioButton value="Customer" />
+                  <RadioButton  value="Customer" />
                   <Text>Customer</Text>
                 </View>
                 <View className="flex-row items-center mb-4">
@@ -97,7 +97,7 @@ export default function AddCustomerScreen() {
               mode="contained"
               onPress={handleAddCustomer}
               disabled={!isFormValid}
-              style={{ backgroundColor: isFormValid ? '#2563eb' : '#9ca3af' }}
+              style={{ backgroundColor: isFormValid ? '#fe4c24' : '#9ca3af' }}
             >
               Add Customer
             </Button>

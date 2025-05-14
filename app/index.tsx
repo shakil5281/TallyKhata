@@ -1,26 +1,27 @@
 import * as React from 'react';
 import { BottomNavigation, Text } from 'react-native-paper';
+import Cashbox from '~/screen/Cashbox';
 import HomeScreen from '~/screen/Home';
+import SettingsScreen from '~/screen/Settings';
 
 
-const TransactionsRoute = () => <Text>Transactions</Text>;
 const CustomersRoute = () => <Text>Customers</Text>;
-const SettingsRoute = () => <Text>Settings</Text>;
+
 
 const TallyKhataMenu = () => {
   const [index, setIndex] = React.useState(0);
   const [routes] = React.useState([
     { key: 'Tally', title: 'Tally', focusedIcon: 'notebook-outline' },
-    { key: 'transactions', title: 'Transactions', focusedIcon: 'swap-horizontal' },
+    { key: 'Cashbox', title: 'Cashbox', focusedIcon: 'swap-horizontal' },
     { key: 'customers', title: 'Customers', focusedIcon: 'account-group' },
     { key: 'settings', title: 'Settings', focusedIcon: 'cog' },
   ]);
 
   const renderScene = BottomNavigation.SceneMap({
     Tally: HomeScreen,
-    transactions: TransactionsRoute,
+    Cashbox: Cashbox,
     customers: CustomersRoute,
-    settings: SettingsRoute,
+    settings: SettingsScreen,
   });
 
   return (

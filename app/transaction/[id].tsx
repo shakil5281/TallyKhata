@@ -167,14 +167,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 10,
     padding: 15,
-    shadowColor: '#000',
+    shadowColor: 'transparent',
     shadowOffset: {
       width: 0,
       height: 1,
     },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0,
     shadowRadius: 1.41,
-    elevation: 2,
+    elevation: 0,
   },
   row: {
     flexDirection: 'row',
