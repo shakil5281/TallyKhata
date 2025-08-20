@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, FlatList, Text, StyleSheet, Alert } from 'react-native';
 import { Button, Card } from 'react-native-paper';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { getCustomerTransactions, initDB, deleteTransaction } from '~/lib/db';
-import { useLocalSearchParams } from 'expo-router';
 
 export default function CustomerTransactionScreen() {
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -24,28 +23,24 @@ export default function CustomerTransactionScreen() {
       setLoading(false);
     };
     loadTransactions();
-  }, [id, offset]);
+  }, [id, offset, limit]);
 
   const handleDeleteTransaction = async (transactionId: number) => {
-    Alert.alert(
-      'Delete Transaction',
-      'Are you sure you want to delete this transaction?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
+    Alert.alert('Delete Transaction', 'Are you sure you want to delete this transaction?', [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Delete',
+        onPress: async () => {
+          await deleteTransaction(transactionId);
+          setTransactions((prevTransactions) =>
+            prevTransactions.filter((txn) => txn.id !== transactionId)
+          );
         },
-        {
-          text: 'Delete',
-          onPress: async () => {
-            await deleteTransaction(transactionId);
-            setTransactions((prevTransactions) =>
-              prevTransactions.filter((txn) => txn.id !== transactionId)
-            );
-          },
-        },
-      ]
-    );
+      },
+    ]);
   };
 
   const loadMoreTransactions = () => {
@@ -56,7 +51,11 @@ export default function CustomerTransactionScreen() {
     <View style={styles.container}>
       {/* Balance Header */}
       <Text style={styles.balanceText}>
-        Balance: {transactions.reduce((sum, txn) => txn.type === 'credit' ? sum + txn.amount : sum - txn.amount, 0)}
+        Balance:{' '}
+        {transactions.reduce(
+          (sum, txn) => (txn.type === 'credit' ? sum + txn.amount : sum - txn.amount),
+          0
+        )}
       </Text>
 
       {/* Add Transaction Button */}
@@ -64,8 +63,7 @@ export default function CustomerTransactionScreen() {
         mode="contained"
         onPress={() => router.push(`/add-transaction?id=${id}`)}
         style={styles.addTransactionButton}
-        labelStyle={styles.buttonText}
-      >
+        labelStyle={styles.buttonText}>
         Add Transaction
       </Button>
 
@@ -86,8 +84,7 @@ export default function CustomerTransactionScreen() {
               mode="outlined"
               onPress={() => handleDeleteTransaction(item.id)}
               style={styles.deleteButton}
-              labelStyle={styles.buttonText}
-            >
+              labelStyle={styles.buttonText}>
               Delete
             </Button>
           </Card>
@@ -97,8 +94,7 @@ export default function CustomerTransactionScreen() {
             mode="contained"
             onPress={loadMoreTransactions}
             style={styles.loadMoreButton}
-            disabled={loading}
-          >
+            disabled={loading}>
             {loading ? 'Loading...' : 'Load More'}
           </Button>
         }
@@ -111,8 +107,7 @@ export default function CustomerTransactionScreen() {
           icon="account-plus"
           mode="contained"
           onPress={() => router.push('/add-transaction')}
-          labelStyle={styles.floatingButtonLabel}
-        >
+          labelStyle={styles.floatingButtonLabel}>
           Add Transaction
         </Button>
       </View>
@@ -145,7 +140,6 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: 'white',
     borderRadius: 10,
-    elevation: 3,
   },
   transactionType: {
     fontSize: 18,
@@ -185,7 +179,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF5722',
     borderRadius: 50,
     padding: 10,
-    elevation: 5,
   },
   floatingButtonLabel: {
     color: 'white',
