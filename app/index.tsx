@@ -1,20 +1,40 @@
 import * as React from 'react';
-import { BottomNavigation, Text } from 'react-native-paper';
+import { BottomNavigation } from 'react-native-paper';
+import { StyleSheet, View, StatusBar } from 'react-native';
 import Cashbox from '~/screen/Cashbox';
 import HomeScreen from '~/screen/Home';
 import SettingsScreen from '~/screen/Settings';
+import CustomersListScreen from '~/screen/CustomersList';
 
-
-const CustomersRoute = () => <Text>Customers</Text>;
-
+const CustomersRoute = () => <CustomersListScreen />;
 
 const TallyKhataMenu = () => {
   const [index, setIndex] = React.useState(0);
   const [routes] = React.useState([
-    { key: 'Tally', title: 'Tally', focusedIcon: 'notebook-outline' },
-    { key: 'Cashbox', title: 'Cashbox', focusedIcon: 'swap-horizontal' },
-    { key: 'customers', title: 'Customers', focusedIcon: 'account-group' },
-    { key: 'settings', title: 'Settings', focusedIcon: 'cog' },
+    {
+      key: 'Tally',
+      title: 'Home',
+      focusedIcon: 'home',
+      unfocusedIcon: 'home-outline',
+    },
+    {
+      key: 'Cashbox',
+      title: 'Reports',
+      focusedIcon: 'chart-line',
+      unfocusedIcon: 'chart-line-variant',
+    },
+    {
+      key: 'customers',
+      title: 'Customers',
+      focusedIcon: 'account-group',
+      unfocusedIcon: 'account-group-outline',
+    },
+    {
+      key: 'settings',
+      title: 'Settings',
+      focusedIcon: 'cog',
+      unfocusedIcon: 'cog-outline',
+    },
   ]);
 
   const renderScene = BottomNavigation.SceneMap({
@@ -25,17 +45,42 @@ const TallyKhataMenu = () => {
   });
 
   return (
-<BottomNavigation
-  navigationState={{ index, routes }}
-  onIndexChange={setIndex}
-  renderScene={renderScene}
-  barStyle={{ backgroundColor: 'white', boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)' }}              // Deep red bar
-  activeColor="red"                                  // Soft pink-white active icon
-  inactiveColor="red"                                // Faded red inactive icon
-  activeIndicatorStyle={{ backgroundColor: '#ffdfd8' }} 
-/>
-
+    <View style={styles.container}>
+      <StatusBar backgroundColor="#fe4c24" barStyle="light-content" translucent={false} />
+      <BottomNavigation
+        navigationState={{ index, routes }}
+        onIndexChange={setIndex}
+        renderScene={renderScene}
+        barStyle={styles.bottomNavBar}
+        activeColor="#fe4c24"
+        inactiveColor="#999"
+        activeIndicatorStyle={styles.activeIndicator}
+        style={styles.bottomNavigation}
+      />
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  bottomNavigation: {},
+  bottomNavBar: {
+    backgroundColor: 'white',
+    height: 80,
+    paddingBottom: 0,
+    paddingTop: 0,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  activeIndicator: {
+    backgroundColor: 'rgba(254, 76, 36, 0.12)',
+    borderRadius: 16,
+    height: 32,
+    marginHorizontal: 12,
+  },
+});
 
 export default TallyKhataMenu;

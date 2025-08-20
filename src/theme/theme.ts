@@ -17,10 +17,10 @@ export const darkTheme = {
   ...MD3DarkTheme,
   colors: {
     ...MD3DarkTheme.colors,
-    primary: '#fe4c24',      // you can keep the same brand colors
+    primary: '#fe4c24', // you can keep the same brand colors
     secondary: '#F59E0B',
     accent: '#10B981',
-    background: 'green',    // darker backgrounds
+    background: 'green', // darker backgrounds
     surface: '#1E1E1E',
   },
 };

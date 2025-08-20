@@ -1,11 +1,25 @@
 {
   "expo": {
-    "name": "TallyKhata",
+    "name": "TallyKhata - Digital Ledger",
     "slug": "TallyKhata",
     "scheme": "tallykhata",
     "version": "1.0.0",
+    "description": "Professional digital ledger and accounting app for small businesses and individuals. Track customers, transactions, and generate detailed reports with ease.",
+    "keywords": [
+      "accounting",
+      "ledger",
+      "business",
+      "finance",
+      "transactions",
+      "customers",
+      "reports",
+      "bookkeeping"
+    ],
+    "author": "Shakil Hossain",
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "themeColor": "#fe4c24",
+      "backgroundColor": "#ffffff"
     },
     "experiments": {
       "tsconfigPaths": true
@@ -26,35 +40,77 @@
             ]
           }
         }
-      ]
+      ],
+      "expo-secure-store",
+      "expo-router"
     ],
     "orientation": "portrait",
     "icon": "./assets/mainLogo.png",
     "userInterfaceStyle": "light",
+    "statusBarHidden": false,
+    "statusBarStyle": "light",
+    "statusBarBackgroundColor": "#fe4c24",
     "splash": {
       "image": "./assets/mainLogo.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#fe4c24",
+      "dark": {
+        "image": "./assets/mainLogo.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#fe4c24"
+      }
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "statusBarStyle": "light",
+      "bundleIdentifier": "com.shakil5281.TallyKhata",
+      "buildNumber": "1.0.0",
+      "icon": "./assets/mainLogo.png",
+      "infoPlist": {
+        "UIStatusBarStyle": "UIStatusBarStyleLightContent",
+        "UIViewControllerBasedStatusBarAppearance": false,
+        "CFBundleDisplayName": "TallyKhata",
+        "CFBundleName": "TallyKhata",
+        "CFBundleIdentifier": "com.shakil5281.TallyKhata",
+        "NSCameraUsageDescription": "This app uses camera to scan documents and receipts",
+        "NSPhotoLibraryUsageDescription": "This app accesses photo library to select images for receipts and documents",
+        "NSMicrophoneUsageDescription": "This app uses microphone for voice notes and audio recording"
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/mainLogo.png",
+        "backgroundColor": "#fe4c24"
       },
       "package": "com.shakil5281.TallyKhata",
       "versionCode": 1,
-      "icon": "./assets/mainLogo.png"
+      "icon": "./assets/mainLogo.png",
+      "statusBarHidden": false,
+      "statusBarStyle": "light-content",
+      "statusBarBackgroundColor": "#fe4c24",
+      "navigationBarColor": "#fe4c24",
+      "softwareKeyboardLayoutMode": "pan",
+      "label": "TallyKhata",
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE"
+      ]
     },
     "extra": {
       "eas": {
-        "projectId": "bf32f053-4118-4af2-a701-399462e852ac"
+        "projectId": "40e058da-a7ee-4042-8c53-460cb5ed1cda"
+      },
+      "appInfo": {
+        "company": "Shakil Hossain",
+        "website": "https://tallykhata.app",
+        "support": "support@tallykhata.app",
+        "privacy": "https://tallykhata.app/privacy",
+        "terms": "https://tallykhata.app/terms"
       }
-    }
+    },
+    "owner": "shakil5281"
   }
 }
