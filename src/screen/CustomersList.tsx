@@ -1,274 +1,295 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, FlatList, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { Avatar, IconButton, Text, Searchbar, Surface, FAB, Chip } from 'react-native-paper';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  RefreshControl,
+  Dimensions,
+} from 'react-native';
+import {
+  Searchbar,
+  IconButton,
+  Avatar,
+  FAB,
+  Divider,
+} from 'react-native-paper';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { getCustomers, getUserProfile } from '~/lib/db';
-import { StatusBar } from 'expo-status-bar';
-import { CustomerCardSkeleton } from '../../components/SkeletonLoader';
+import { useTheme } from '~/context/ThemeContext';
+import { getCustomers } from '~/lib/db';
 import PageTransition from '../../components/PageTransition';
 
-export default function CustomersListScreen() {
-  interface Customer {
-    id: number;
-    name: string;
-    phone: string;
-    type: string;
-    photo?: string;
-    total_balance: number;
-  }
+const { width: screenWidth } = Dimensions.get('window');
 
+interface Customer {
+  id: number;
+  name: string;
+  phone: string;
+  type: string;
+  photo?: string;
+  total_balance: number;
+}
+
+export default function CustomersListScreen() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
-  const [selectedFilter, setSelectedFilter] = useState<string>('All');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'credit' | 'debit'>('all');
   const router = useRouter();
+  const { theme } = useTheme();
+  const { colors } = theme.custom;
 
-  const loadData = useCallback(async () => {
+  const loadCustomers = useCallback(async () => {
     try {
       setLoading(true);
-      const [customersResult, profileResult] = await Promise.all([
-        getCustomers(),
-        getUserProfile(),
-      ]);
-      setCustomers(customersResult as Customer[]);
-      setFilteredCustomers(customersResult as Customer[]);
-      setProfile(profileResult);
+      const customersData = await getCustomers();
+      setCustomers(customersData as Customer[]);
+      setFilteredCustomers(customersData as Customer[]);
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('Error loading customers:', error);
+      setCustomers([]);
+      setFilteredCustomers([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Load data on initial mount
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadCustomers();
+    setRefreshing(false);
+  }, [loadCustomers]);
 
-  // Refresh data every time the screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      loadData();
-    }, [loadData])
+      loadCustomers();
+    }, [loadCustomers])
   );
 
   useEffect(() => {
-    let filtered = customers;
+    let filtered = [...customers];
 
-    // Apply search filter
-    if (searchQuery) {
-      filtered = filtered.filter(
-        (customer) =>
-          customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          customer.phone.includes(searchQuery)
-      );
+    if (searchQuery && searchQuery.trim().length > 0) {
+      const query = searchQuery.trim().toLowerCase();
+      filtered = filtered.filter((customer) => {
+        const name = customer.name?.toLowerCase() || '';
+        const phone = customer.phone?.toLowerCase() || '';
+        return name.includes(query) || phone.includes(query);
+      });
     }
 
-    // Apply type filter
-    if (selectedFilter !== 'All') {
-      filtered = filtered.filter((customer) => customer.type === selectedFilter);
+    if (selectedFilter === 'credit') {
+      filtered = filtered.filter((customer) => customer.total_balance > 0);
+    } else if (selectedFilter === 'debit') {
+      filtered = filtered.filter((customer) => customer.total_balance < 0);
     }
 
     setFilteredCustomers(filtered);
-  }, [searchQuery, customers, selectedFilter]);
+  }, [customers, searchQuery, selectedFilter]);
 
-  const renderCustomer = ({ item }: { item: Customer }) => (
-    <TouchableOpacity
-      onPress={() => router.push(`/transaction/${item.id}`)}
-      style={styles.customerCardContainer}>
-      <Surface style={styles.customerCard} elevation={0}>
-        <View style={styles.customerCardContent}>
-          <View style={styles.customerInfo}>
-            {item.photo ? (
-              <Avatar.Image size={50} source={{ uri: item.photo }} style={styles.customerAvatar} />
-            ) : (
-              <Avatar.Text
-                size={50}
-                label={item.name ? item.name.charAt(0).toUpperCase() : '?'}
-                style={[
-                  styles.customerAvatar,
-                  { backgroundColor: item.type === 'Customer' ? '#fe4c24' : '#4CAF50' },
-                ]}
-                labelStyle={styles.avatarLabel}
-              />
-            )}
-            <View style={styles.customerDetails}>
-              <Text style={styles.customerName}>{item.name}</Text>
-              <Text style={styles.customerPhone}>
-                {item.phone || 'No phone'} • {item.type}
-              </Text>
-              <View style={styles.balanceRow}>
-                <Text style={styles.balanceLabel}>Balance: </Text>
-                <Text
-                  style={[
-                    styles.balanceAmount,
-                    { color: item.total_balance >= 0 ? '#4CAF50' : '#F44336' },
-                  ]}>
-                  {profile?.currency || '৳'}
-                  {Math.abs(item.total_balance || 0).toFixed(0)}
-                  <Text style={styles.balanceType}>
-                    {item.total_balance >= 0 ? ' (Credit)' : ' (Debit)'}
-                  </Text>
-                </Text>
-              </View>
-            </View>
-          </View>
+  const handleCustomerPress = (customer: Customer) => {
+    router.push(`/customer-edit/${customer.id}`);
+  };
 
-          <View style={styles.customerActions}>
-            <IconButton
-              icon="pencil"
-              size={20}
-              iconColor="#666"
-              style={styles.editButton}
-              onPress={(e) => {
-                e.stopPropagation();
-                router.push(`/customer-edit/${item.id}`);
-              }}
-            />
-            <IconButton
-              icon="chevron-right"
-              size={24}
-              iconColor="#666"
-              style={styles.chevronIcon}
-            />
-          </View>
-        </View>
-      </Surface>
-    </TouchableOpacity>
-  );
+  const handleTransactionPress = (customer: Customer) => {
+    router.push(`/transaction/${customer.id}`);
+  };
 
-  const renderFilterChips = () => {
-    const filters = ['All', 'Customer', 'Supplier'];
-    const customerCount = customers.filter((c) => c.type === 'Customer').length;
-    const supplierCount = customers.filter((c) => c.type === 'Supplier').length;
-    const counts = { All: customers.length, Customer: customerCount, Supplier: supplierCount };
-
-    return (
-      <View style={styles.filterContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
-          {filters.map((filter) => (
-            <Chip
-              key={filter}
-              selected={selectedFilter === filter}
-              onPress={() => setSelectedFilter(filter)}
-              style={[styles.filterChip, selectedFilter === filter && styles.filterChipActive]}
-              textStyle={[
-                styles.filterChipText,
-                selectedFilter === filter && styles.filterChipTextActive,
-              ]}>
-              {filter} ({counts[filter as keyof typeof counts]})
-            </Chip>
-          ))}
-        </ScrollView>
-      </View>
-    );
+  const handleAddCustomer = () => {
+    router.push('/add-customer');
   };
 
   const renderHeader = () => (
-    <View style={styles.headerSection}>
-      <View style={styles.headerTop}>
-        <Text style={styles.headerTitle}>All Customers</Text>
-        <TouchableOpacity onPress={() => router.push('/add-customer')} style={styles.addButton}>
-          <IconButton icon="plus" size={20} iconColor="white" style={styles.addButtonIcon} />
-        </TouchableOpacity>
-      </View>
+    <View style={[styles.header, { backgroundColor: colors.primary }]}>
+      <Text style={[styles.headerTitle, { color: colors.textInverse }]}>
+        গ্রাহক তালিকা
+      </Text>
+      <Text style={[styles.headerSubtitle, { color: colors.textInverse }]}>
+        {customers.length} জন গ্রাহক
+      </Text>
+    </View>
+  );
 
+  const renderSearchBar = () => (
+    <View style={styles.searchContainer}>
       <Searchbar
-        placeholder="Search by name, phone or type..."
+        placeholder="নাম বা ফোন নম্বর খুঁজুন..."
         onChangeText={setSearchQuery}
         value={searchQuery}
-        style={styles.searchBar}
-        placeholderTextColor="#666"
+        style={[styles.searchBar, { backgroundColor: colors.surface }]}
+        inputStyle={[styles.searchInput, { color: colors.text }]}
+        iconColor={colors.textSecondary}
+        placeholderTextColor={colors.textSecondary}
+        elevation={2}
       />
+    </View>
+  );
 
-      {renderFilterChips()}
-
-      <View style={styles.resultsInfo}>
-        <Text style={styles.resultsText}>
-          {filteredCustomers.length} of {customers.length} customers
-        </Text>
-        {searchQuery && <Text style={styles.searchInfo}>Search: &quot;{searchQuery}&quot;</Text>}
+  const renderFilters = () => (
+    <View style={styles.filterContainer}>
+      <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>
+        ফিল্টার:
+      </Text>
+      <View style={styles.filterButtons}>
+        {[
+          { key: 'all', label: 'সবাই', count: customers.length },
+          { key: 'credit', label: 'পাওনাদার', count: customers.filter(c => c.total_balance > 0).length },
+          { key: 'debit', label: 'দেনাদার', count: customers.filter(c => c.total_balance < 0).length },
+        ].map((filter) => (
+          <TouchableOpacity
+            key={filter.key}
+            onPress={() => setSelectedFilter(filter.key as any)}
+            style={[
+              styles.filterButton,
+              {
+                backgroundColor: selectedFilter === filter.key ? colors.primary : colors.surface,
+              },
+            ]}>
+            <Text
+              style={[
+                styles.filterButtonText,
+                {
+                  color: selectedFilter === filter.key ? colors.textInverse : colors.text,
+                },
+              ]}>
+              {filter.label} ({filter.count})
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
     </View>
   );
 
-  const renderEmptyState = () => (
-    <Surface style={styles.emptyState}>
-      <IconButton icon="account-search" size={64} iconColor="#ccc" />
-      <Text style={styles.emptyStateTitle}>
-        {searchQuery ? 'No customers found' : 'No customers yet'}
-      </Text>
-      <Text style={styles.emptyStateSubtext}>
-        {searchQuery
-          ? `Try adjusting your search &quot;${searchQuery}&quot;`
-          : 'Add your first customer to get started'}
-      </Text>
-      {!searchQuery && (
-        <IconButton
-          icon="plus"
-          size={20}
-          iconColor="white"
-          style={styles.emptyStateButton}
-          onPress={() => router.push('/add-customer')}
+  const renderCustomerItem = ({ item }: { item: Customer }) => (
+    <TouchableOpacity
+      style={[styles.customerItem, { backgroundColor: colors.surface }]}
+      onPress={() => handleCustomerPress(item)}
+      activeOpacity={0.7}>
+      
+      <View style={styles.customerInfo}>
+        <Avatar.Text
+          size={50}
+          label={item.name.charAt(0).toUpperCase()}
+          style={[
+            styles.customerAvatar,
+            {
+              backgroundColor: item.total_balance >= 0 ? colors.success : colors.error,
+            },
+          ]}
+          labelStyle={styles.avatarText}
         />
-      )}
-    </Surface>
+        
+        <View style={styles.customerDetails}>
+          <Text style={[styles.customerName, { color: colors.text }]} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text style={[styles.customerPhone, { color: colors.textSecondary }]}>
+            {item.phone || 'ফোন নম্বর নেই'}
+          </Text>
+          <Text style={[styles.customerType, { color: colors.textSecondary }]}>
+            {item.type === 'Customer' ? 'গ্রাহক' : 'সরবরাহকারী'}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.customerActions}>
+        <View style={styles.balanceSection}>
+          <Text style={[styles.balanceLabel, { color: colors.textSecondary }]}>
+            ব্যালেন্স
+          </Text>
+          <Text
+            style={[
+              styles.balanceAmount,
+              {
+                color: item.total_balance >= 0 ? colors.success : colors.error,
+              },
+            ]}>
+            {item.total_balance >= 0 ? '+' : ''}{item.total_balance}৳
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={[styles.transactionButton, { backgroundColor: colors.secondary }]}
+          onPress={() => handleTransactionPress(item)}
+          activeOpacity={0.8}>
+          <IconButton
+            icon="cash-plus"
+            size={20}
+            iconColor={colors.textInverse}
+          />
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
   );
+
+  const renderEmptyState = () => (
+    <View style={[styles.emptyContainer, { backgroundColor: colors.background }]}>
+      <IconButton
+        icon="account-group-outline"
+        size={80}
+        iconColor={colors.textSecondary}
+      />
+      <Text style={[styles.emptyTitle, { color: colors.text }]}>
+        কোন গ্রাহক পাওয়া যায়নি
+      </Text>
+      <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+        নতুন গ্রাহক যোগ করে শুরু করুন
+      </Text>
+      <TouchableOpacity
+        style={[styles.emptyButton, { backgroundColor: colors.primary }]}
+        onPress={handleAddCustomer}
+        activeOpacity={0.8}>
+        <Text style={[styles.emptyButtonText, { color: colors.textInverse }]}>
+          গ্রাহক যোগ করুন
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  if (loading) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <Text style={[styles.loadingText, { color: colors.text }]}>
+          লোড হচ্ছে...
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <PageTransition>
-      <StatusBar style="light" />
-
-      {/* Custom Header */}
-      <View style={styles.headerContainer}>
-        <Text style={styles.headerTitleText}>All Customers</Text>
-        <IconButton
-          icon="filter-variant"
-          size={24}
-          iconColor="white"
-          onPress={() => {}}
-          style={styles.headerRightAction}
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {renderHeader()}
+        {renderSearchBar()}
+        {renderFilters()}
+        
+        <FlatList
+          data={filteredCustomers}
+          renderItem={renderCustomerItem}
+          keyExtractor={(item) => item.id.toString()}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
+          ListEmptyComponent={renderEmptyState()}
+        />
+        
+        <FAB
+          icon="plus"
+          style={[styles.fab, { backgroundColor: colors.primary }]}
+          onPress={handleAddCustomer}
+          color={colors.textInverse}
         />
       </View>
-
-      <View style={styles.container}>
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            {renderHeader()}
-            {[1, 2, 3, 4].map((item) => (
-              <CustomerCardSkeleton key={item} />
-            ))}
-          </View>
-        ) : (
-          <>
-            {renderHeader()}
-
-            {filteredCustomers.length > 0 ? (
-              <FlatList
-                data={filteredCustomers}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={renderCustomer}
-                showsVerticalScrollIndicator={false}
-                style={styles.customersList}
-                contentContainerStyle={styles.customersListContent}
-              />
-            ) : (
-              renderEmptyState()
-            )}
-          </>
-        )}
-      </View>
-
-      {/* Floating Action Button */}
-      <FAB
-        icon="plus"
-        style={styles.fab}
-        onPress={() => router.push('/add-customer')}
-        color="white"
-        label="Add Customer"
-      />
     </PageTransition>
   );
 }
@@ -276,142 +297,77 @@ export default function CustomersListScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
-
-  headerContainer: {
-    backgroundColor: '#fe4c24',
-    paddingTop: 8,
+  header: {
+    paddingTop: 50,
+    paddingBottom: 20,
     paddingHorizontal: 20,
-    paddingBottom: 8,
-    flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    height: 65,
-    position: 'relative',
-  },
-  headerTitleText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'white',
-    textAlign: 'center',
-    flex: 1,
-  },
-  headerRightAction: {
-    position: 'absolute',
-    right: 8,
-    top: '50%',
-    marginTop: -20,
-  },
-  loadingContainer: {
-    padding: 16,
-  },
-  headerSection: {
-    backgroundColor: 'white',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    marginBottom: 5,
   },
-  addButton: {
-    backgroundColor: '#fe4c24',
-    borderRadius: 20,
-    padding: 4,
+  headerSubtitle: {
+    fontSize: 16,
+    opacity: 0.9,
   },
-  addButtonIcon: {
-    margin: 0,
+  searchContainer: {
+    padding: 20,
+    paddingBottom: 10,
   },
   searchBar: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    marginBottom: 16,
-    paddingHorizontal: 10,
-    fontSize: 16,
-    color: '#333',
+    borderRadius: 10,
   },
   searchInput: {
     fontSize: 16,
   },
   filterContainer: {
-    marginBottom: 12,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
-  filterScroll: {
+  filterLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 10,
+  },
+  filterButtons: {
     flexDirection: 'row',
+    gap: 10,
   },
-  filterChip: {
-    marginRight: 8,
-    backgroundColor: '#f0f0f0',
+  filterButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 20,
+    elevation: 2,
   },
-  filterChipActive: {
-    backgroundColor: '#fe4c24',
-  },
-  filterChipText: {
-    color: '#666',
+  filterButtonText: {
     fontSize: 14,
-  },
-  filterChipTextActive: {
-    color: 'white',
     fontWeight: '600',
   },
-  resultsInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  resultsText: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-  },
-  searchInfo: {
-    fontSize: 12,
-    color: '#fe4c24',
-    fontStyle: 'italic',
-  },
-  customersList: {
-    flex: 1,
-  },
-  customersListContent: {
-    padding: 16,
+  listContent: {
+    paddingHorizontal: 20,
     paddingBottom: 100,
   },
-  customerCardContainer: {
-    marginBottom: 12,
-  },
-  customerCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#f0f0f0',
-  },
-  customerCardContent: {
+  customerItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    padding: 16,
+    marginBottom: 10,
+    borderRadius: 12,
+    elevation: 2,
   },
   customerInfo: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
   },
   customerAvatar: {
-    marginRight: 12,
+    marginRight: 16,
   },
-  avatarLabel: {
-    fontSize: 18,
+  avatarText: {
+    fontSize: 20,
     fontWeight: 'bold',
     color: 'white',
   },
@@ -421,70 +377,82 @@ const styles = StyleSheet.create({
   customerName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 4,
   },
   customerPhone: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 6,
+    marginBottom: 2,
   },
-  balanceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  balanceLabel: {
-    fontSize: 14,
-    color: '#666',
-  },
-  balanceAmount: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  balanceType: {
+  customerType: {
     fontSize: 12,
-    fontWeight: 'normal',
-  },
-  chevronIcon: {
-    margin: 0,
+    opacity: 0.7,
   },
   customerActions: {
-    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    minHeight: 60,
+  },
+  balanceSection: {
+    alignItems: 'flex-end',
+    marginBottom: 10,
+  },
+  balanceLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  balanceAmount: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  transactionButton: {
+    borderRadius: 20,
+    elevation: 2,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 40,
+    paddingTop: 50,
   },
-  editButton: {
-    marginRight: 8,
-  },
-  emptyState: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 32,
-    alignItems: 'center',
-    margin: 16,
-    marginTop: 40,
-  },
-  emptyStateTitle: {
+  emptyTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+    marginBottom: 10,
     textAlign: 'center',
   },
-  emptyStateSubtext: {
+  emptySubtitle: {
     fontSize: 16,
-    color: '#666',
     textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 22,
+    marginBottom: 20,
+    opacity: 0.8,
   },
-  emptyStateButton: {
-    backgroundColor: '#fe4c24',
-    borderRadius: 25,
+  emptyButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 20,
+    elevation: 2,
+  },
+  emptyButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   fab: {
     position: 'absolute',
-    bottom: 20,
-    right: 20,
-    backgroundColor: '#fe4c24',
+    margin: 20,
+    right: 0,
+    bottom: 80,
+    borderRadius: 30,
+    elevation: 4,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 18,
+    fontWeight: '600',
   },
 });

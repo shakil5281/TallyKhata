@@ -1,7 +1,9 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Dimensions } from 'react-native';
 import { Surface, Text, IconButton, Chip } from 'react-native-paper';
 import { useTheme } from '~/context/ThemeContext';
+
+const { width: screenWidth } = Dimensions.get('window');
 
 interface ThemeToggleProps {
   showTitle?: boolean;
@@ -9,8 +11,8 @@ interface ThemeToggleProps {
 }
 
 export default function ThemeToggle({ showTitle = true, compact = false }: ThemeToggleProps) {
-  const { currentThemeMode, setTheme, isDark } = useTheme();
-  const { colors, borderRadius } = useTheme().theme.custom;
+  const { theme, isDark, setTheme, currentThemeMode } = useTheme();
+  const { colors, borderRadius, shadows } = theme.custom;
 
   const themeOptions = [
     { key: 'light', label: 'Light', icon: 'white-balance-sunny', color: '#fbbf24' },
@@ -30,12 +32,16 @@ export default function ThemeToggle({ showTitle = true, compact = false }: Theme
             key={option.key}
             icon={option.icon}
             size={24}
-            iconColor={currentThemeMode === option.key ? colors.primary : colors.textSecondary}
+            iconColor={currentThemeMode === option.key ? colors.textInverse : colors.textSecondary}
             style={[
               styles.compactButton,
               {
-                backgroundColor: currentThemeMode === option.key ? colors.primary : 'transparent',
+                backgroundColor:
+                  currentThemeMode === option.key ? colors.primary : colors.surfaceSecondary,
                 borderRadius: borderRadius.round,
+                borderColor: currentThemeMode === option.key ? colors.primary : colors.border,
+                borderWidth: 1,
+                ...shadows.light,
               },
             ]}
             onPress={() => handleThemeChange(option.key)}
@@ -46,7 +52,15 @@ export default function ThemeToggle({ showTitle = true, compact = false }: Theme
   }
 
   return (
-    <Surface style={[styles.container, { backgroundColor: colors.surface }]}>
+    <Surface
+      style={[
+        styles.container,
+        {
+          backgroundColor: colors.surface,
+          borderRadius: borderRadius.md,
+          ...shadows.light,
+        },
+      ]}>
       {showTitle && <Text style={[styles.title, { color: colors.text }]}>Theme</Text>}
 
       <View style={styles.optionsContainer}>
@@ -61,6 +75,7 @@ export default function ThemeToggle({ showTitle = true, compact = false }: Theme
                 backgroundColor:
                   currentThemeMode === option.key ? colors.primary : colors.surfaceSecondary,
                 borderColor: currentThemeMode === option.key ? colors.primary : colors.border,
+                ...shadows.light,
               },
             ]}
             textStyle={[
@@ -103,6 +118,7 @@ const styles = StyleSheet.create({
   },
   optionChip: {
     borderWidth: 1,
+    minWidth: screenWidth < 400 ? 80 : 100,
   },
   optionText: {
     fontSize: 14,

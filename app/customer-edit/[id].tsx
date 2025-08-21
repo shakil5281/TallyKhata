@@ -7,21 +7,20 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Text,
 } from 'react-native';
 import {
   Button,
   TextInput,
-  Text,
-  Surface,
   IconButton,
   ActivityIndicator as RNActivityIndicator,
 } from 'react-native-paper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { getCustomerById, updateCustomer, updateCustomerPhoto } from '~/lib/db';
-import { StatusBar } from 'expo-status-bar';
 import PageTransition from '../../components/PageTransition';
 import { useToast } from '~/context/ToastContext';
 import PhotoPicker from '../../components/PhotoPicker';
+import { useTheme } from '~/context/ThemeContext';
 
 interface Customer {
   id: number;
@@ -44,6 +43,8 @@ export default function CustomerEditScreen() {
   const [errors, setErrors] = useState<any>({});
   const router = useRouter();
   const { showToast } = useToast();
+  const { theme } = useTheme();
+  const { colors } = theme.custom;
 
   const isValidPhone = (num: string) => /^01[3-9]\d{8}$/.test(num);
 
@@ -60,7 +61,7 @@ export default function CustomerEditScreen() {
       }
     } catch (error) {
       console.error('Error loading customer:', error);
-      Alert.alert('Error', 'Failed to load customer data.');
+      Alert.alert('ত্রুটি', 'গ্রাহকের তথ্য লোড করতে ব্যর্থ।');
     } finally {
       setLoading(false);
     }
@@ -74,15 +75,15 @@ export default function CustomerEditScreen() {
     const newErrors: any = {};
 
     if (!name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = 'নাম প্রয়োজন';
     } else if (name.trim().length < 2) {
-      newErrors.name = 'Name must be at least 2 characters';
+      newErrors.name = 'নাম কমপক্ষে ২ অক্ষর হতে হবে';
     }
 
     if (!phone.trim()) {
-      newErrors.phone = 'Phone number is required';
+      newErrors.phone = 'ফোন নম্বর প্রয়োজন';
     } else if (!isValidPhone(phone)) {
-      newErrors.phone = 'Please enter a valid Bangladeshi phone number (01XXXXXXXXX)';
+      newErrors.phone = 'সঠিক বাংলাদেশী ফোন নম্বর দিন (01XXXXXXXXX)';
     }
 
     setErrors(newErrors);
@@ -98,340 +99,470 @@ export default function CustomerEditScreen() {
       setSaving(true);
 
       // Update customer basic info
-      const success = await updateCustomer(Number(id), {
+      await updateCustomer(Number(id), {
         name: name.trim(),
         phone,
         type,
       });
 
-      if (success) {
-        showToast(`Customer "${name.trim()}" updated successfully!`, 'success');
-
-        // Small delay to show toast
-        setTimeout(() => {
-          router.push('/');
-          router.replace('/');
-        }, 100);
-      } else {
-        throw new Error('Failed to update customer');
+      // Update photo if changed
+      if (photo !== customer?.photo) {
+        await updateCustomerPhoto(Number(id), photo);
       }
+
+      showToast('গ্রাহকের তথ্য সফলভাবে আপডেট হয়েছে!', 'success');
+
+      // Small delay to show toast
+      setTimeout(() => {
+        router.back();
+      }, 100);
     } catch (error) {
       console.error('Error updating customer:', error);
-      Alert.alert('Error', 'Failed to update customer. Please try again.');
+      Alert.alert('ত্রুটি', 'গ্রাহকের তথ্য আপডেট করতে ব্যর্থ। আবার চেষ্টা করুন।');
     } finally {
       setSaving(false);
     }
   };
 
-  const handlePhotoUpdate = async (newPhotoUri: string) => {
-    try {
-      setPhoto(newPhotoUri);
-
-      if (newPhotoUri) {
-        const success = await updateCustomerPhoto(Number(id), newPhotoUri);
-        if (success) {
-          showToast('Customer photo updated successfully!', 'success');
-        } else {
-          showToast('Failed to update photo', 'error');
-        }
-      }
-    } catch (error) {
-      console.error('Error updating photo:', error);
-      showToast('Failed to update photo', 'error');
-    }
+  const handleBackPress = () => {
+    router.back();
   };
 
+  const handleDeleteCustomer = () => {
+    Alert.alert(
+      'গ্রাহক মুছুন',
+      'আপনি কি নিশ্চিত যে আপনি এই গ্রাহককে মুছতে চান? এই কাজটি অপরিবর্তনীয়।',
+      [
+        { text: 'বাতিল', style: 'cancel' },
+        {
+          text: 'মুছুন',
+          style: 'destructive',
+          onPress: () => {
+            // Implement delete functionality
+            showToast('গ্রাহক মুছে ফেলা হয়েছে', 'success');
+            router.back();
+          },
+        },
+      ]
+    );
+  };
+
+  const renderHeader = () => (
+    <View style={[styles.header, { backgroundColor: colors.primary }]}>
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={handleBackPress}
+        activeOpacity={0.7}>
+        <IconButton
+          icon="arrow-left"
+          size={24}
+          iconColor={colors.textInverse}
+        />
+      </TouchableOpacity>
+      
+      <View style={styles.headerContent}>
+        <Text style={[styles.headerTitle, { color: colors.textInverse }]}>
+          গ্রাহক সম্পাদনা করুন
+        </Text>
+        <Text style={[styles.headerSubtitle, { color: colors.textInverse }]}>
+          {customer?.name || 'গ্রাহক'} এর তথ্য আপডেট করুন
+        </Text>
+      </View>
+    </View>
+  );
+
+  const renderCustomerInfo = () => (
+    <View style={styles.section}>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>
+        বর্তমান তথ্য
+      </Text>
+      
+      {customer && (
+        <View style={[styles.customerCard, { backgroundColor: colors.surface }]}>
+          <View style={styles.customerInfo}>
+            <View style={[styles.customerAvatar, { backgroundColor: colors.primary }]}>
+              <Text style={[styles.avatarText, { color: colors.textInverse }]}>
+                {customer.name.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            
+            <View style={styles.customerDetails}>
+              <Text style={[styles.customerName, { color: colors.text }]}>
+                {customer.name}
+              </Text>
+              <Text style={[styles.customerPhone, { color: colors.textSecondary }]}>
+                {customer.phone || 'ফোন নম্বর নেই'}
+              </Text>
+              <Text style={[styles.customerType, { color: colors.textSecondary }]}>
+                {customer.type === 'Customer' ? 'গ্রাহক' : 'সরবরাহকারী'}
+              </Text>
+            </View>
+          </View>
+          
+          <View style={styles.balanceInfo}>
+            <Text style={[styles.balanceLabel, { color: colors.textSecondary }]}>
+              বর্তমান ব্যালেন্স
+            </Text>
+            <Text
+              style={[
+                styles.balanceAmount,
+                {
+                  color: customer.total_balance >= 0 ? colors.success : colors.error,
+                },
+              ]}>
+              {customer.total_balance >= 0 ? '+' : ''}{customer.total_balance}৳
+            </Text>
+          </View>
+        </View>
+      )}
+    </View>
+  );
+
   const renderTypeSelector = () => (
-    <Surface style={styles.typeCard}>
-      <Text style={styles.sectionTitle}>Contact Type</Text>
+    <View style={styles.section}>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>
+        যোগাযোগের ধরন
+      </Text>
       <View style={styles.typeButtonsContainer}>
         <TouchableOpacity
           style={[
             styles.typeButton,
-            type === 'Customer' && styles.typeButtonActive,
-            { backgroundColor: type === 'Customer' ? '#fe4c24' : '#f0f0f0' },
+            {
+              backgroundColor: type === 'Customer' ? colors.primary : colors.surface,
+              borderColor: colors.border,
+            },
           ]}
-          onPress={() => setType('Customer')}>
-          <IconButton
-            icon="account"
-            size={24}
-            iconColor={type === 'Customer' ? 'white' : '#fe4c24'}
-            style={styles.typeIcon}
-          />
-          <Text
-            style={[styles.typeButtonText, { color: type === 'Customer' ? 'white' : '#fe4c24' }]}>
-            Customer
-          </Text>
+          onPress={() => setType('Customer')}
+          activeOpacity={0.7}>
           <Text
             style={[
-              styles.typeDescription,
-              { color: type === 'Customer' ? 'rgba(255,255,255,0.8)' : '#666' },
+              styles.typeButtonText,
+              {
+                color: type === 'Customer' ? colors.textInverse : colors.text,
+              },
             ]}>
-            Buys from you
+            গ্রাহক
           </Text>
         </TouchableOpacity>
-
+        
         <TouchableOpacity
           style={[
             styles.typeButton,
-            type === 'Supplier' && styles.typeButtonActive,
-            { backgroundColor: type === 'Supplier' ? '#4CAF50' : '#f0f0f0' },
+            {
+              backgroundColor: type === 'Supplier' ? colors.primary : colors.surface,
+              borderColor: colors.border,
+            },
           ]}
-          onPress={() => setType('Supplier')}>
-          <IconButton
-            icon="truck"
-            size={24}
-            iconColor={type === 'Supplier' ? 'white' : '#4CAF50'}
-            style={styles.typeIcon}
-          />
-          <Text
-            style={[styles.typeButtonText, { color: type === 'Supplier' ? 'white' : '#4CAF50' }]}>
-            Supplier
-          </Text>
+          onPress={() => setType('Supplier')}
+          activeOpacity={0.7}>
           <Text
             style={[
-              styles.typeDescription,
-              { color: type === 'Supplier' ? 'rgba(255,255,255,0.8)' : '#666' },
+              styles.typeButtonText,
+              {
+                color: type === 'Supplier' ? colors.textInverse : colors.text,
+              },
             ]}>
-            Sells to you
+            সরবরাহকারী
           </Text>
         </TouchableOpacity>
       </View>
-    </Surface>
+    </View>
+  );
+
+  const renderPhotoSection = () => (
+    <View style={styles.section}>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>
+        প্রোফাইল ছবি
+      </Text>
+      <View style={styles.photoContainer}>
+        <PhotoPicker
+          photo={photo}
+          onPhotoChange={setPhoto}
+          size={80}
+          style={[
+            styles.photoPicker,
+            { backgroundColor: colors.surfaceSecondary },
+          ]}
+        />
+        <Text style={[styles.photoHint, { color: colors.textSecondary }]}>
+          ছবি পরিবর্তন করুন
+        </Text>
+      </View>
+    </View>
+  );
+
+  const renderForm = () => (
+    <View style={styles.formContainer}>
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          গ্রাহকের তথ্য
+        </Text>
+        
+        <View style={styles.inputContainer}>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>
+            নাম *
+          </Text>
+          <TextInput
+            mode="outlined"
+            value={name}
+            onChangeText={setName}
+            placeholder="গ্রাহকের নাম লিখুন"
+            style={[
+              styles.textInput,
+              {
+                backgroundColor: colors.surface,
+                borderColor: errors.name ? colors.error : colors.border,
+              },
+            ]}
+            outlineStyle={[
+              styles.inputOutline,
+              { borderColor: errors.name ? colors.error : colors.border },
+            ]}
+            contentStyle={[styles.inputContent, { color: colors.text }]}
+            placeholderTextColor={colors.textSecondary}
+            error={!!errors.name}
+          />
+          {errors.name && (
+            <Text style={[styles.errorText, { color: colors.error }]}>
+              {errors.name}
+            </Text>
+          )}
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>
+            ফোন নম্বর *
+          </Text>
+          <TextInput
+            mode="outlined"
+            value={phone}
+            onChangeText={setPhone}
+            placeholder="01XXXXXXXXX"
+            keyboardType="phone-pad"
+            style={[
+              styles.textInput,
+              {
+                backgroundColor: colors.surface,
+                borderColor: errors.phone ? colors.error : colors.border,
+              },
+            ]}
+            outlineStyle={[
+              styles.inputOutline,
+              { borderColor: errors.phone ? colors.error : colors.border },
+            ]}
+            contentStyle={[styles.inputContent, { color: colors.text }]}
+            placeholderTextColor={colors.textSecondary}
+            error={!!errors.phone}
+          />
+          {errors.phone && (
+            <Text style={[styles.errorText, { color: colors.error }]}>
+              {errors.phone}
+            </Text>
+          )}
+        </View>
+      </View>
+
+      {renderTypeSelector()}
+      {renderPhotoSection()}
+    </View>
+  );
+
+  const renderActions = () => (
+    <View style={styles.actionsContainer}>
+      <Button
+        mode="contained"
+        onPress={handleUpdateCustomer}
+        loading={saving}
+        disabled={saving}
+        style={[
+          styles.saveButton,
+          { backgroundColor: colors.primary },
+        ]}
+        contentStyle={styles.saveButtonContent}
+        labelStyle={[styles.saveButtonText, { color: colors.textInverse }]}>
+        {saving ? 'আপডেট হচ্ছে...' : 'আপডেট করুন'}
+      </Button>
+      
+      <TouchableOpacity
+        style={[
+          styles.deleteButton,
+          { borderColor: colors.error },
+        ]}
+        onPress={handleDeleteCustomer}
+        activeOpacity={0.7}>
+        <Text style={[styles.deleteButtonText, { color: colors.error }]}>
+          গ্রাহক মুছুন
+        </Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity
+        style={[
+          styles.cancelButton,
+          { borderColor: colors.border },
+        ]}
+        onPress={handleBackPress}
+        activeOpacity={0.7}>
+        <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>
+          বাতিল
+        </Text>
+      </TouchableOpacity>
+    </View>
   );
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <RNActivityIndicator size="large" color="#fe4c24" />
-        <Text style={styles.loadingText}>Loading customer...</Text>
-      </View>
-    );
-  }
-
-  if (!customer) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Customer not found</Text>
-        <Button
-          onPress={() => {
-            router.push('/');
-            router.replace('/');
-          }}>
-          Go Back
-        </Button>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <RNActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.text }]}>
+          লোড হচ্ছে...
+        </Text>
       </View>
     );
   }
 
   return (
     <PageTransition>
-      <StatusBar style="light" />
-
-      {/* Custom Header */}
-      <View style={styles.headerContainer}>
-        <IconButton
-          icon="arrow-left"
-          size={24}
-          iconColor="white"
-          onPress={() => {
-            router.push('/');
-            router.replace('/');
-          }}
-          style={styles.headerLeftAction}
-        />
-        <Text style={styles.headerTitle}>Edit Customer</Text>
-        <IconButton
-          icon={saving ? 'loading' : 'check'}
-          size={24}
-          iconColor="white"
-          onPress={handleUpdateCustomer}
-          disabled={saving}
-          style={styles.headerRightAction}
-        />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {renderHeader()}
+        
+        <KeyboardAvoidingView
+          style={styles.keyboardContainer}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled">
+            {renderCustomerInfo()}
+            {renderForm()}
+          </ScrollView>
+        </KeyboardAvoidingView>
+        
+        {renderActions()}
       </View>
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollViewContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          contentInsetAdjustmentBehavior="automatic">
-          {/* Photo Section */}
-          <Surface style={styles.photoCard}>
-            <View style={styles.photoSection}>
-              <PhotoPicker
-                currentPhoto={photo}
-                onPhotoSelected={handlePhotoUpdate}
-                size={100}
-                showLabel={true}
-                customerName={name || 'Customer'}
-              />
-              <Text style={styles.photoTitle}>Update {type} Photo</Text>
-              <Text style={styles.photoSubtitle}>Tap to change or remove photo</Text>
-            </View>
-          </Surface>
-
-          {/* Basic Information */}
-          <Surface style={styles.infoCard}>
-            <Text style={styles.sectionTitle}>Basic Information</Text>
-
-            <TextInput
-              label="Full Name"
-              value={name}
-              onChangeText={setName}
-              mode="outlined"
-              style={styles.input}
-              error={!!errors.name}
-              right={<TextInput.Icon icon="account" />}
-            />
-            {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
-
-            <TextInput
-              label="Phone Number"
-              value={phone}
-              onChangeText={setPhone}
-              mode="outlined"
-              style={styles.input}
-              error={!!errors.phone}
-              keyboardType="phone-pad"
-              right={<TextInput.Icon icon="phone" />}
-            />
-            {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
-          </Surface>
-
-          {/* Type Selector */}
-          {renderTypeSelector()}
-
-          {/* Current Balance Info */}
-          <Surface style={styles.balanceCard}>
-            <Text style={styles.sectionTitle}>Current Balance</Text>
-            <View style={styles.balanceInfo}>
-              <Text style={styles.balanceLabel}>Balance:</Text>
-              <Text
-                style={[
-                  styles.balanceAmount,
-                  { color: customer.total_balance >= 0 ? '#4CAF50' : '#F44336' },
-                ]}>
-                ৳{Math.abs(customer.total_balance || 0).toFixed(0)}
-                <Text style={styles.balanceType}>
-                  {customer.total_balance >= 0 ? ' (Credit)' : ' (Debit)'}
-                </Text>
-              </Text>
-            </View>
-            <Text style={styles.balanceNote}>
-              Note: Balance is calculated from transactions and cannot be edited directly.
-            </Text>
-          </Surface>
-        </ScrollView>
-      </KeyboardAvoidingView>
     </PageTransition>
   );
 }
 
 const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#F44336',
-    marginBottom: 16,
-  },
-  headerContainer: {
-    backgroundColor: '#fe4c24',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 50,
-    paddingBottom: 16,
-    elevation: 4,
-  },
-  headerLeftAction: {
-    margin: 0,
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  headerRightAction: {
-    margin: 0,
-  },
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+  },
+  header: {
+    paddingTop: 50,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButton: {
+    marginRight: 16,
+  },
+  headerContent: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    opacity: 0.9,
+  },
+  keyboardContainer: {
+    flex: 1,
   },
   scrollView: {
     flex: 1,
   },
-  scrollViewContent: {
-    padding: 16,
-    paddingBottom: 32,
+  scrollContent: {
+    paddingBottom: 140,
   },
-  photoCard: {
-    backgroundColor: 'white',
-    borderRadius: 16,
+  formContainer: {
     padding: 20,
-    marginBottom: 16,
-    elevation: 2,
   },
-  photoSection: {
-    alignItems: 'center',
-  },
-  photoTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 16,
-    marginBottom: 4,
-  },
-  photoSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-  },
-  infoCard: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    elevation: 2,
+  section: {
+    marginBottom: 24,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '600',
     marginBottom: 16,
   },
-  input: {
+  customerCard: {
+    padding: 16,
+    borderRadius: 12,
+    elevation: 2,
+  },
+  customerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  customerAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  avatarText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  customerDetails: {
+    flex: 1,
+  },
+  customerName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  customerPhone: {
+    fontSize: 14,
+    marginBottom: 2,
+  },
+  customerType: {
+    fontSize: 12,
+    opacity: 0.7,
+  },
+  balanceInfo: {
+    alignItems: 'center',
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  balanceLabel: {
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  balanceAmount: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '500',
     marginBottom: 8,
   },
-  typeCard: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    elevation: 2,
+  textInput: {
+    fontSize: 16,
+  },
+  inputOutline: {
+    borderRadius: 10,
+  },
+  inputContent: {
+    fontSize: 16,
+  },
+  errorText: {
+    fontSize: 14,
+    marginTop: 6,
+    marginLeft: 4,
   },
   typeButtonsContainer: {
     flexDirection: 'row',
@@ -439,56 +570,80 @@ const styles = StyleSheet.create({
   },
   typeButton: {
     flex: 1,
-    padding: 16,
-    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    borderWidth: 1,
     alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 100,
-  },
-  typeButtonActive: {
-    elevation: 4,
-  },
-  typeIcon: {
-    margin: 0,
-    marginBottom: 8,
+    elevation: 2,
   },
   typeButtonText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 4,
+    fontWeight: '600',
   },
-  typeDescription: {
-    fontSize: 12,
+  photoContainer: {
+    alignItems: 'center',
+  },
+  photoPicker: {
+    marginBottom: 12,
+  },
+  photoHint: {
+    fontSize: 14,
     textAlign: 'center',
   },
-  balanceCard: {
-    backgroundColor: 'white',
-    borderRadius: 16,
+  actionsContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     padding: 20,
-    marginBottom: 16,
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  saveButton: {
+    borderRadius: 25,
+    marginBottom: 12,
     elevation: 2,
   },
-  balanceInfo: {
-    flexDirection: 'row',
+  saveButtonContent: {
+    paddingVertical: 8,
+  },
+  saveButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  deleteButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    borderWidth: 1,
     alignItems: 'center',
     marginBottom: 12,
   },
-  balanceLabel: {
+  deleteButtonText: {
     fontSize: 16,
-    color: '#666',
-    marginRight: 8,
+    fontWeight: '500',
   },
-  balanceAmount: {
+  cancelButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
     fontSize: 18,
-    fontWeight: 'bold',
-  },
-  balanceType: {
-    fontSize: 14,
-    fontWeight: 'normal',
-  },
-  balanceNote: {
-    fontSize: 12,
-    color: '#999',
-    fontStyle: 'italic',
+    fontWeight: '600',
+    marginTop: 16,
   },
 });

@@ -2,7 +2,7 @@
 
 /**
  * Android Build Script for TallyKhata
- * 
+ *
  * This script helps build Android apps locally using EAS.
  */
 
@@ -14,7 +14,7 @@ console.log('===================================');
 
 const rl = readline.createInterface({
   input: process.stdin,
-  output: process.stdout
+  output: process.stdout,
 });
 
 async function buildAndroid() {
@@ -23,12 +23,12 @@ async function buildAndroid() {
     console.log('1. Development (APK) - For testing');
     console.log('2. Preview (APK) - For internal testing');
     console.log('3. Production (AAB) - For Play Store');
-    
+
     rl.question('\n🎯 Select build profile (1-3): ', async (answer) => {
       let profile;
       let description;
-      
-      switch(answer) {
+
+      switch (answer) {
         case '1':
           profile = 'development';
           description = 'Development APK';
@@ -46,15 +46,15 @@ async function buildAndroid() {
           profile = 'preview';
           description = 'Preview APK';
       }
-      
+
       console.log(`\n🚀 Building ${description}...`);
       console.log(`📋 Profile: ${profile}`);
-      
+
       try {
         // Check if EAS CLI is installed
         execSync('eas --version', { stdio: 'pipe' });
         console.log('✅ EAS CLI found');
-        
+
         // Check if logged in
         try {
           execSync('eas whoami', { stdio: 'pipe' });
@@ -65,18 +65,17 @@ async function buildAndroid() {
           rl.close();
           return;
         }
-        
+
         // Start the build
         console.log(`\n🏗️  Starting build with profile: ${profile}`);
         console.log('⏳ This may take 10-20 minutes...');
-        
-        execSync(`eas build --platform android --profile ${profile}`, { 
-          stdio: 'inherit' 
+
+        execSync(`eas build --platform android --profile ${profile}`, {
+          stdio: 'inherit',
         });
-        
+
         console.log('\n🎉 Build completed successfully!');
         console.log('📱 Check your EAS dashboard for the build');
-        
       } catch (error) {
         console.error('\n❌ Build failed:', error.message);
         console.log('\n🔧 Troubleshooting tips:');
@@ -85,10 +84,9 @@ async function buildAndroid() {
         console.log('3. Check app.json and eas.json');
         console.log('4. Run: eas build:configure');
       }
-      
+
       rl.close();
     });
-    
   } catch (error) {
     console.error('❌ Script error:', error.message);
     rl.close();

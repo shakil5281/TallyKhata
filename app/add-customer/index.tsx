@@ -7,24 +7,21 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Text,
 } from 'react-native';
 import {
   Avatar,
   Button,
   TextInput,
-  Text,
-  Surface,
   IconButton,
-  Portal,
-  Modal,
   ActivityIndicator as RNActivityIndicator,
 } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { addCustomer } from '~/lib/db';
-import { StatusBar } from 'expo-status-bar';
 import PageTransition from '../../components/PageTransition';
 import { useToast } from '~/context/ToastContext';
 import PhotoPicker from '../../components/PhotoPicker';
+import { useTheme } from '~/context/ThemeContext';
 
 export default function AddCustomerScreen() {
   const [name, setName] = useState('');
@@ -35,6 +32,8 @@ export default function AddCustomerScreen() {
   const [errors, setErrors] = useState<any>({});
   const router = useRouter();
   const { showToast } = useToast();
+  const { theme } = useTheme();
+  const { colors } = theme.custom;
 
   const isValidPhone = (num: string) => /^01[3-9]\d{8}$/.test(num);
 
@@ -42,15 +41,15 @@ export default function AddCustomerScreen() {
     const newErrors: any = {};
 
     if (!name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = 'নাম প্রয়োজন';
     } else if (name.trim().length < 2) {
-      newErrors.name = 'Name must be at least 2 characters';
+      newErrors.name = 'নাম কমপক্ষে ২ অক্ষর হতে হবে';
     }
 
     if (!phone.trim()) {
-      newErrors.phone = 'Phone number is required';
+      newErrors.phone = 'ফোন নম্বর প্রয়োজন';
     } else if (!isValidPhone(phone)) {
-      newErrors.phone = 'Please enter a valid Bangladeshi phone number (01XXXXXXXXX)';
+      newErrors.phone = 'সঠিক বাংলাদেশী ফোন নম্বর দিন (01XXXXXXXXX)';
     }
 
     setErrors(newErrors);
@@ -68,7 +67,7 @@ export default function AddCustomerScreen() {
       const data = await addCustomer({ name: name.trim(), phone, type, photo });
       console.log('Customer added:', data);
 
-      showToast(`${type} "${name.trim()}" added successfully!`, 'success');
+      showToast(`${type === 'Customer' ? 'গ্রাহক' : 'সরবরাহকারী'} "${name.trim()}" সফলভাবে যোগ হয়েছে!`, 'success');
 
       // Small delay to show toast
       setTimeout(() => {
@@ -76,223 +75,238 @@ export default function AddCustomerScreen() {
       }, 100);
     } catch (error) {
       console.error('Error adding customer:', error);
-      Alert.alert('Error', 'Failed to add customer. Please try again.');
+      Alert.alert('ত্রুটি', 'গ্রাহক যোগ করতে ব্যর্থ। আবার চেষ্টা করুন।');
     } finally {
       setSaving(false);
     }
   };
 
-  // useEffect(() => {
-  //   dropCustomersTable().then(() => {
-  //     initDB(); // Recreate with correct columns
-  //     dropTables();
-  //     clearTables();
-  //     clearAndDropTables()
-  //   });
-  // }, []);
+  const handleBackPress = () => {
+    router.back();
+  };
+
+  const renderHeader = () => (
+    <View style={[styles.header, { backgroundColor: colors.primary }]}>
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={handleBackPress}
+        activeOpacity={0.7}>
+        <IconButton
+          icon="arrow-left"
+          size={24}
+          iconColor={colors.textInverse}
+        />
+      </TouchableOpacity>
+      
+      <View style={styles.headerContent}>
+        <Text style={[styles.headerTitle, { color: colors.textInverse }]}>
+          নতুন গ্রাহক যোগ করুন
+        </Text>
+        <Text style={[styles.headerSubtitle, { color: colors.textInverse }]}>
+          আপনার ব্যবসায় নতুন গ্রাহক যোগ করুন
+        </Text>
+      </View>
+    </View>
+  );
 
   const renderTypeSelector = () => (
-    <Surface style={styles.typeCard}>
-      <Text style={styles.sectionTitle}>Contact Type</Text>
+    <View style={styles.section}>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>
+        যোগাযোগের ধরন
+      </Text>
       <View style={styles.typeButtonsContainer}>
         <TouchableOpacity
           style={[
             styles.typeButton,
-            type === 'Customer' && styles.typeButtonActive,
-            { backgroundColor: type === 'Customer' ? '#fe4c24' : '#f0f0f0' },
+            {
+              backgroundColor: type === 'Customer' ? colors.primary : colors.surface,
+              borderColor: colors.border,
+            },
           ]}
-          onPress={() => setType('Customer')}>
-          <IconButton
-            icon="account"
-            size={24}
-            iconColor={type === 'Customer' ? 'white' : '#fe4c24'}
-            style={styles.typeIcon}
-          />
-          <Text
-            style={[styles.typeButtonText, { color: type === 'Customer' ? 'white' : '#fe4c24' }]}>
-            Customer
-          </Text>
+          onPress={() => setType('Customer')}
+          activeOpacity={0.7}>
           <Text
             style={[
-              styles.typeDescription,
-              { color: type === 'Customer' ? 'rgba(255,255,255,0.8)' : '#666' },
+              styles.typeButtonText,
+              {
+                color: type === 'Customer' ? colors.textInverse : colors.text,
+              },
             ]}>
-            Buys from you
+            গ্রাহক
           </Text>
         </TouchableOpacity>
-
+        
         <TouchableOpacity
           style={[
             styles.typeButton,
-            type === 'Supplier' && styles.typeButtonActive,
-            { backgroundColor: type === 'Supplier' ? '#4CAF50' : '#f0f0f0' },
+            {
+              backgroundColor: type === 'Supplier' ? colors.primary : colors.surface,
+              borderColor: colors.border,
+            },
           ]}
-          onPress={() => setType('Supplier')}>
-          <IconButton
-            icon="truck"
-            size={24}
-            iconColor={type === 'Supplier' ? 'white' : '#4CAF50'}
-            style={styles.typeIcon}
-          />
-          <Text
-            style={[styles.typeButtonText, { color: type === 'Supplier' ? 'white' : '#4CAF50' }]}>
-            Supplier
-          </Text>
+          onPress={() => setType('Supplier')}
+          activeOpacity={0.7}>
           <Text
             style={[
-              styles.typeDescription,
-              { color: type === 'Supplier' ? 'rgba(255,255,255,0.8)' : '#666' },
+              styles.typeButtonText,
+              {
+                color: type === 'Supplier' ? colors.textInverse : colors.text,
+              },
             ]}>
-            Sells to you
+            সরবরাহকারী
           </Text>
         </TouchableOpacity>
       </View>
-    </Surface>
+    </View>
+  );
+
+  const renderPhotoSection = () => (
+    <View style={styles.section}>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>
+        প্রোফাইল ছবি
+      </Text>
+      <View style={styles.photoContainer}>
+        <PhotoPicker
+          photo={photo}
+          onPhotoChange={setPhoto}
+          size={80}
+          style={[
+            styles.photoPicker,
+            { backgroundColor: colors.surfaceSecondary },
+          ]}
+        />
+        <Text style={[styles.photoHint, { color: colors.textSecondary }]}>
+          ছবি যোগ করা ঐচ্ছিক
+        </Text>
+      </View>
+    </View>
+  );
+
+  const renderForm = () => (
+    <View style={styles.formContainer}>
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          গ্রাহকের তথ্য
+        </Text>
+        
+        <View style={styles.inputContainer}>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>
+            নাম *
+          </Text>
+          <TextInput
+            mode="outlined"
+            value={name}
+            onChangeText={setName}
+            placeholder="গ্রাহকের নাম লিখুন"
+            style={[
+              styles.textInput,
+              {
+                backgroundColor: colors.surface,
+                borderColor: errors.name ? colors.error : colors.border,
+              },
+            ]}
+            outlineStyle={[
+              styles.inputOutline,
+              { borderColor: errors.name ? colors.error : colors.border },
+            ]}
+            contentStyle={[styles.inputContent, { color: colors.text }]}
+            placeholderTextColor={colors.textSecondary}
+            error={!!errors.name}
+          />
+          {errors.name && (
+            <Text style={[styles.errorText, { color: colors.error }]}>
+              {errors.name}
+            </Text>
+          )}
+        </View>
+
+        <View style={styles.inputContainer}>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>
+            ফোন নম্বর *
+          </Text>
+          <TextInput
+            mode="outlined"
+            value={phone}
+            onChangeText={setPhone}
+            placeholder="01XXXXXXXXX"
+            keyboardType="phone-pad"
+            style={[
+              styles.textInput,
+              {
+                backgroundColor: colors.surface,
+                borderColor: errors.phone ? colors.error : colors.border,
+              },
+            ]}
+            outlineStyle={[
+              styles.inputOutline,
+              { borderColor: errors.phone ? colors.error : colors.border },
+            ]}
+            contentStyle={[styles.inputContent, { color: colors.text }]}
+            placeholderTextColor={colors.textSecondary}
+            error={!!errors.phone}
+          />
+          {errors.phone && (
+            <Text style={[styles.errorText, { color: colors.error }]}>
+              {errors.phone}
+            </Text>
+          )}
+        </View>
+      </View>
+
+      {renderTypeSelector()}
+      {renderPhotoSection()}
+    </View>
+  );
+
+  const renderActions = () => (
+    <View style={styles.actionsContainer}>
+      <Button
+        mode="contained"
+        onPress={handleAddCustomer}
+        loading={saving}
+        disabled={saving}
+        style={[
+          styles.saveButton,
+          { backgroundColor: colors.primary },
+        ]}
+        contentStyle={styles.saveButtonContent}
+        labelStyle={[styles.saveButtonText, { color: colors.textInverse }]}>
+        {saving ? 'সংরক্ষণ হচ্ছে...' : 'গ্রাহক যোগ করুন'}
+      </Button>
+      
+      <TouchableOpacity
+        style={[
+          styles.cancelButton,
+          { borderColor: colors.border },
+        ]}
+        onPress={handleBackPress}
+        activeOpacity={0.7}>
+        <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>
+          বাতিল
+        </Text>
+      </TouchableOpacity>
+    </View>
   );
 
   return (
     <PageTransition>
-      <StatusBar style="light" />
-
-      {/* Custom Header */}
-      <View style={styles.headerContainer}>
-        <IconButton
-          icon="arrow-left"
-          size={24}
-          iconColor="white"
-          onPress={() => router.push('/')}
-          style={styles.headerLeftAction}
-        />
-        <Text style={styles.headerTitle}>Add Customer</Text>
-        <IconButton
-          icon={saving ? 'loading' : 'check'}
-          size={24}
-          iconColor="white"
-          onPress={handleAddCustomer}
-          disabled={saving}
-          style={styles.headerRightAction}
-        />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {renderHeader()}
+        
+        <KeyboardAvoidingView
+          style={styles.keyboardContainer}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled">
+            {renderForm()}
+          </ScrollView>
+        </KeyboardAvoidingView>
+        
+        {renderActions()}
       </View>
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollViewContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          contentInsetAdjustmentBehavior="automatic">
-          {/* Avatar Section */}
-          <Surface style={styles.avatarCard}>
-            <View style={styles.avatarSection}>
-              <PhotoPicker
-                currentPhoto={photo}
-                onPhotoSelected={setPhoto}
-                size={80}
-                showLabel={true}
-                customerName={name || 'Customer'}
-              />
-              <Text style={styles.avatarTitle}>Add New {type}</Text>
-              <Text style={styles.avatarSubtitle}>Fill in the details below</Text>
-            </View>
-          </Surface>
-
-          {/* Name Input */}
-          <Surface style={styles.inputCard}>
-            <Text style={styles.inputLabel}>Full Name</Text>
-            <TextInput
-              value={name}
-              onChangeText={(text) => {
-                setName(text);
-                if (errors.name) {
-                  setErrors({ ...errors, name: undefined });
-                }
-              }}
-              mode="outlined"
-              style={styles.input}
-              placeholder="e.g. John Doe, ABC Company"
-              error={!!errors.name}
-              left={<TextInput.Icon icon="account" />}
-              outlineColor="#e0e0e0"
-              activeOutlineColor={type === 'Customer' ? '#fe4c24' : '#4CAF50'}
-            />
-            {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
-          </Surface>
-
-          {/* Phone Input */}
-          <Surface style={styles.inputCard}>
-            <Text style={styles.inputLabel}>Phone Number</Text>
-            <TextInput
-              value={phone}
-              onChangeText={(text) => {
-                setPhone(text);
-                if (errors.phone) {
-                  setErrors({ ...errors, phone: undefined });
-                }
-              }}
-              mode="outlined"
-              keyboardType="phone-pad"
-              style={styles.input}
-              placeholder="e.g. 01712345678"
-              error={!!errors.phone}
-              left={<TextInput.Icon icon="phone" />}
-              outlineColor="#e0e0e0"
-              activeOutlineColor={type === 'Customer' ? '#fe4c24' : '#4CAF50'}
-            />
-            {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
-            <Text style={styles.helperText}>Enter a valid Bangladeshi phone number</Text>
-          </Surface>
-
-          {renderTypeSelector()}
-
-          {/* Preview Card */}
-          <Surface style={styles.previewCard}>
-            <Text style={styles.previewTitle}>Preview</Text>
-            <View style={styles.previewContent}>
-              <Avatar.Text
-                size={45}
-                label={name ? name.charAt(0).toUpperCase() : '?'}
-                style={[
-                  styles.previewAvatar,
-                  { backgroundColor: type === 'Customer' ? '#fe4c24' : '#4CAF50' },
-                ]}
-              />
-              <View style={styles.previewDetails}>
-                <Text style={styles.previewName}>{name || 'Name'}</Text>
-                <Text style={styles.previewPhone}>
-                  {phone || 'Phone number'} • {type}
-                </Text>
-              </View>
-            </View>
-          </Surface>
-
-          {/* Submit Button */}
-          <Button
-            mode="contained"
-            onPress={handleAddCustomer}
-            style={[
-              styles.submitButton,
-              { backgroundColor: type === 'Customer' ? '#fe4c24' : '#4CAF50' },
-            ]}
-            labelStyle={styles.submitButtonText}
-            disabled={saving}
-            loading={saving}>
-            {saving ? 'Adding...' : `Add ${type}`}
-          </Button>
-        </ScrollView>
-      </KeyboardAvoidingView>
-
-      {/* Loading Overlay */}
-      <Portal>
-        <Modal visible={saving} dismissable={false} contentContainerStyle={styles.loadingModal}>
-          <Surface style={styles.loadingModalContent}>
-            <RNActivityIndicator size="large" color="#fe4c24" />
-            <Text style={styles.loadingModalText}>Adding {type.toLowerCase()}...</Text>
-          </Surface>
-        </Modal>
-      </Portal>
     </PageTransition>
   );
 }
@@ -300,204 +314,129 @@ export default function AddCustomerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
-  headerContainer: {
-    backgroundColor: '#fe4c24',
-    paddingTop: 8,
+  header: {
+    paddingTop: 50,
+    paddingBottom: 20,
     paddingHorizontal: 20,
-    paddingBottom: 8,
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    height: 65,
-    position: 'relative',
   },
-  headerTitle: {
-    fontSize: 19,
-    fontWeight: 'bold',
-    color: 'white',
-    textAlign: 'center',
+  backButton: {
+    marginRight: 16,
+  },
+  headerContent: {
     flex: 1,
   },
-  headerLeftAction: {
-    position: 'absolute',
-    left: 8,
-    top: '50%',
-    marginTop: -20,
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 5,
   },
-  headerRightAction: {
-    position: 'absolute',
-    right: 8,
-    top: '50%',
-    marginTop: -20,
+  headerSubtitle: {
+    fontSize: 16,
+    opacity: 0.9,
+  },
+  keyboardContainer: {
+    flex: 1,
   },
   scrollView: {
     flex: 1,
   },
-  scrollViewContent: {
-    flexGrow: 1,
-    paddingBottom: 100, // Extra space for keyboard
+  scrollContent: {
+    paddingBottom: 120,
   },
-  avatarCard: {
-    backgroundColor: 'white',
-    margin: 16,
-    marginBottom: 8,
-    borderRadius: 16,
-    padding: 24,
+  formContainer: {
+    padding: 20,
   },
-  avatarSection: {
-    alignItems: 'center',
-  },
-  avatar: {
-    marginBottom: 16,
-  },
-  avatarLabel: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  avatarTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-  },
-  avatarSubtitle: {
-    fontSize: 14,
-    color: '#666',
-  },
-  inputCard: {
-    backgroundColor: 'white',
-    margin: 16,
-    marginTop: 8,
-    marginBottom: 8,
-    borderRadius: 12,
-    padding: 16,
+  section: {
+    marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  inputContainer: {
+    marginBottom: 20,
   },
   inputLabel: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '500',
     marginBottom: 8,
   },
-  input: {
-    backgroundColor: 'white',
+  textInput: {
+    fontSize: 16,
+  },
+  inputOutline: {
+    borderRadius: 10,
+  },
+  inputContent: {
     fontSize: 16,
   },
   errorText: {
-    fontSize: 12,
-    color: '#F44336',
-    marginTop: 4,
-  },
-  helperText: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
-  },
-  typeCard: {
-    backgroundColor: 'white',
-    margin: 16,
-    marginTop: 8,
-    marginBottom: 8,
-    borderRadius: 12,
-    padding: 16,
+    fontSize: 14,
+    marginTop: 6,
+    marginLeft: 4,
   },
   typeButtonsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 12,
   },
   typeButton: {
     flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    borderWidth: 1,
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    marginHorizontal: 4,
-  },
-  typeButtonActive: {},
-  typeIcon: {
-    margin: 0,
-    marginBottom: 4,
+    elevation: 2,
   },
   typeButtonText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 2,
+    fontWeight: '600',
   },
-  typeDescription: {
-    fontSize: 12,
-    textAlign: 'center',
+  photoContainer: {
+    alignItems: 'center',
   },
-  previewCard: {
-    backgroundColor: 'white',
-    margin: 16,
-    marginTop: 8,
-    marginBottom: 8,
-    borderRadius: 12,
-    padding: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: '#fe4c24',
-  },
-  previewTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+  photoPicker: {
     marginBottom: 12,
   },
-  previewContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  previewAvatar: {
-    marginRight: 12,
-  },
-  previewDetails: {
-    flex: 1,
-  },
-  previewName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-  },
-  previewPhone: {
+  photoHint: {
     fontSize: 14,
-    color: '#666',
-  },
-  submitButton: {
-    margin: 16,
-    marginTop: 8,
-    marginBottom: 50,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  submitButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  loadingModal: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    margin: 20,
-  },
-  loadingModalContent: {
-    backgroundColor: 'white',
-    padding: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    minWidth: 200,
-  },
-  loadingModalText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#333',
     textAlign: 'center',
+  },
+  actionsContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 20,
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  saveButton: {
+    borderRadius: 25,
+    marginBottom: 12,
+    elevation: 2,
+  },
+  saveButtonContent: {
+    paddingVertical: 8,
+  },
+  saveButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  cancelButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
   },
 });

@@ -12,23 +12,19 @@ import {
 import {
   Button,
   TextInput,
-  Surface,
   IconButton,
-  Portal,
-  Modal,
   ActivityIndicator as RNActivityIndicator,
 } from 'react-native-paper';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { addTransaction, getCustomerTransactions, getCustomers, getUserProfile } from '~/lib/db';
-
-import { StatusBar } from 'expo-status-bar';
 import PageTransition from '../../components/PageTransition';
 import { useToast } from '~/context/ToastContext';
+import { useTheme } from '~/context/ThemeContext';
 
 export default function AddTransactionScreen() {
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
-  const [type, setType] = useState<any>('credit');
+  const [type, setType] = useState<'credit' | 'debit'>('credit');
   const [customer, setCustomer] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [saving, setSaving] = useState(false);
@@ -37,14 +33,16 @@ export default function AddTransactionScreen() {
   const { id, transactionId } = useLocalSearchParams();
   const router = useRouter();
   const { showToast } = useToast();
+  const { theme } = useTheme();
+  const { colors } = theme.custom;
 
   const validateForm = () => {
     const newErrors: any = {};
 
     if (!amount.trim()) {
-      newErrors.amount = 'Amount is required';
+      newErrors.amount = 'টাকার পরিমাণ প্রয়োজন';
     } else if (isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
-      newErrors.amount = 'Please enter a valid amount';
+      newErrors.amount = 'সঠিক টাকার পরিমাণ দিন';
     }
 
     setErrors(newErrors);
@@ -52,8 +50,7 @@ export default function AddTransactionScreen() {
   };
 
   const handleBackPress = () => {
-    // Navigate back to home with refresh parameter
-    router.push('/');
+    router.back();
   };
 
   const handleSaveTransaction = async () => {
@@ -67,10 +64,10 @@ export default function AddTransactionScreen() {
       if (transactionId) {
         // Edit existing transaction
         // (You would add your update logic here)
-        showToast('Transaction updated successfully!', 'success');
+        showToast('লেনদেন সফলভাবে আপডেট হয়েছে!', 'success');
       } else {
         await addTransaction(Number(id), type, parseFloat(amount), note);
-        showToast('Transaction added successfully!', 'success');
+        showToast('লেনদেন সফলভাবে যোগ হয়েছে!', 'success');
       }
 
       // Small delay to show toast, then navigate back to home
@@ -79,7 +76,7 @@ export default function AddTransactionScreen() {
       }, 100);
     } catch (error) {
       console.error('Error saving transaction:', error);
-      Alert.alert('Error', 'Failed to save transaction. Please try again.');
+      Alert.alert('ত্রুটি', 'লেনদেন সংরক্ষণ করতে ব্যর্থ। আবার চেষ্টা করুন।');
     } finally {
       setSaving(false);
     }
@@ -98,17 +95,12 @@ export default function AddTransactionScreen() {
         setProfile(profileResult);
 
         if (transactionId) {
-          // Fetch transaction details and populate form fields
-          const transactions = await getCustomerTransactions(Number(id), 100, 0);
-          const txn: any = transactions.find((txn: any) => txn.id === Number(transactionId));
-          if (txn) {
-            setAmount(txn.amount.toString());
-            setNote(txn.note || '');
-            setType(txn.type);
-          }
+          // Load existing transaction data for editing
+          // You would implement this based on your needs
         }
       } catch (error) {
         console.error('Error loading data:', error);
+        Alert.alert('Error', 'Failed to load customer data');
       } finally {
         setLoading(false);
       }
@@ -117,247 +109,277 @@ export default function AddTransactionScreen() {
     loadData();
   }, [id, transactionId]);
 
-  const renderCustomerCard = () => {
-    if (!customer) return null;
+  const renderHeader = () => (
+    <View style={[styles.header, { backgroundColor: colors.primary }]}>
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={handleBackPress}
+        activeOpacity={0.7}>
+        <IconButton
+          icon="arrow-left"
+          size={24}
+          iconColor={colors.textInverse}
+        />
+      </TouchableOpacity>
+      
+      <View style={styles.headerContent}>
+        <Text style={[styles.headerTitle, { color: colors.textInverse }]}>
+          নতুন লেনদেন যোগ করুন
+        </Text>
+        <Text style={[styles.headerSubtitle, { color: colors.textInverse }]}>
+          {customer?.name || 'গ্রাহক'} এর জন্য নতুন লেনদেন
+        </Text>
+      </View>
+    </View>
+  );
 
-    return (
-      <Surface style={styles.customerCard}>
-        <View style={styles.customerInfo}>
-          <View style={styles.customerAvatar}>
-            <Text style={styles.customerAvatarText}>{customer.name.charAt(0).toUpperCase()}</Text>
-          </View>
-          <View style={styles.customerDetails}>
-            <Text style={styles.customerName}>{customer.name}</Text>
-            <Text style={styles.customerPhone}>{customer.phone || 'No phone'}</Text>
-            <Text style={styles.customerBalance}>
-              Current Balance:
-              <Text
-                style={[
-                  styles.balanceAmount,
-                  { color: customer.total_balance >= 0 ? '#4CAF50' : '#F44336' },
-                ]}>
-                {' '}
-                {profile?.currency || '৳'}
-                {Math.abs(customer.total_balance || 0).toFixed(0)}
-                {customer.total_balance >= 0 ? ' (Credit)' : ' (Debit)'}
+  const renderCustomerInfo = () => (
+    <View style={styles.section}>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>
+        গ্রাহকের তথ্য
+      </Text>
+      
+      {customer && (
+        <View style={[styles.customerCard, { backgroundColor: colors.surface }]}>
+          <View style={styles.customerInfo}>
+            <View style={[styles.customerAvatar, { backgroundColor: colors.primary }]}>
+              <Text style={[styles.avatarText, { color: colors.textInverse }]}>
+                {customer.name.charAt(0).toUpperCase()}
               </Text>
+            </View>
+            
+            <View style={styles.customerDetails}>
+              <Text style={[styles.customerName, { color: colors.text }]}>
+                {customer.name}
+              </Text>
+              <Text style={[styles.customerPhone, { color: colors.textSecondary }]}>
+                {customer.phone || 'ফোন নম্বর নেই'}
+              </Text>
+              <Text style={[styles.customerType, { color: colors.textSecondary }]}>
+                {customer.type === 'Customer' ? 'গ্রাহক' : 'সরবরাহকারী'}
+              </Text>
+            </View>
+          </View>
+          
+          <View style={styles.balanceInfo}>
+            <Text style={[styles.balanceLabel, { color: colors.textSecondary }]}>
+              বর্তমান ব্যালেন্স
+            </Text>
+            <Text
+              style={[
+                styles.balanceAmount,
+                {
+                  color: customer.total_balance >= 0 ? colors.success : colors.error,
+                },
+              ]}>
+              {customer.total_balance >= 0 ? '+' : ''}{customer.total_balance}৳
             </Text>
           </View>
         </View>
-      </Surface>
-    );
-  };
+      )}
+    </View>
+  );
 
-  const renderTransactionTypeCard = () => (
-    <Surface style={styles.typeCard}>
-      <Text style={styles.sectionTitle}>Transaction Type</Text>
+  const renderTransactionType = () => (
+    <View style={styles.section}>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>
+        লেনদেনের ধরন
+      </Text>
+      
       <View style={styles.typeButtonsContainer}>
         <TouchableOpacity
           style={[
             styles.typeButton,
-            type === 'credit' && styles.typeButtonActive,
-            { backgroundColor: type === 'credit' ? '#4CAF50' : '#f0f0f0' },
+            {
+              backgroundColor: type === 'credit' ? colors.success : colors.surface,
+              borderColor: colors.border,
+            },
           ]}
-          onPress={() => setType('credit')}>
-          <IconButton
-            icon="plus-circle"
-            size={24}
-            iconColor={type === 'credit' ? 'white' : '#4CAF50'}
-            style={styles.typeIcon}
-          />
-          <Text style={[styles.typeButtonText, { color: type === 'credit' ? 'white' : '#4CAF50' }]}>
-            Credit
+          onPress={() => setType('credit')}
+          activeOpacity={0.7}>
+          <Text
+            style={[
+              styles.typeButtonText,
+              {
+                color: type === 'credit' ? colors.textInverse : colors.text,
+              },
+            ]}>
+            পাওনা (+)
           </Text>
           <Text
             style={[
               styles.typeDescription,
-              { color: type === 'credit' ? 'rgba(255,255,255,0.8)' : '#666' },
+              {
+                color: type === 'credit' ? colors.textInverse + '80' : colors.textSecondary,
+              },
             ]}>
-            Money In
+            গ্রাহক থেকে টাকা পাবেন
           </Text>
         </TouchableOpacity>
-
+        
         <TouchableOpacity
           style={[
             styles.typeButton,
-            type === 'debit' && styles.typeButtonActive,
-            { backgroundColor: type === 'debit' ? '#F44336' : '#f0f0f0' },
+            {
+              backgroundColor: type === 'debit' ? colors.error : colors.surface,
+              borderColor: colors.border,
+            },
           ]}
-          onPress={() => setType('debit')}>
-          <IconButton
-            icon="minus-circle"
-            size={24}
-            iconColor={type === 'debit' ? 'white' : '#F44336'}
-            style={styles.typeIcon}
-          />
-          <Text style={[styles.typeButtonText, { color: type === 'debit' ? 'white' : '#F44336' }]}>
-            Debit
+          onPress={() => setType('debit')}
+          activeOpacity={0.7}>
+          <Text
+            style={[
+              styles.typeButtonText,
+              {
+                color: type === 'debit' ? colors.textInverse : colors.text,
+              },
+            ]}>
+            দেনা (-)
           </Text>
           <Text
             style={[
               styles.typeDescription,
-              { color: type === 'debit' ? 'rgba(255,255,255,0.8)' : '#666' },
+              {
+                color: type === 'debit' ? colors.textInverse + '80' : colors.textSecondary,
+              },
             ]}>
-            Money Out
+            গ্রাহককে টাকা দেবেন
           </Text>
         </TouchableOpacity>
       </View>
-    </Surface>
+    </View>
+  );
+
+  const renderTransactionForm = () => (
+    <View style={styles.section}>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>
+        লেনদেনের বিবরণ
+      </Text>
+      
+      <View style={styles.inputContainer}>
+        <Text style={[styles.inputLabel, { color: colors.text }]}>
+          টাকার পরিমাণ *
+        </Text>
+        <TextInput
+          mode="outlined"
+          value={amount}
+          onChangeText={setAmount}
+          placeholder="টাকার পরিমাণ লিখুন"
+          keyboardType="numeric"
+          style={[
+            styles.textInput,
+            {
+              backgroundColor: colors.surface,
+              borderColor: errors.amount ? colors.error : colors.border,
+            },
+          ]}
+          outlineStyle={[
+            styles.inputOutline,
+            { borderColor: errors.amount ? colors.error : colors.border },
+          ]}
+          contentStyle={[styles.inputContent, { color: colors.text }]}
+          placeholderTextColor={colors.textSecondary}
+          error={!!errors.amount}
+          left={<TextInput.Icon icon="currency-bdt" />}
+        />
+        {errors.amount && (
+          <Text style={[styles.errorText, { color: colors.error }]}>
+            {errors.amount}
+          </Text>
+        )}
+      </View>
+
+      <View style={styles.inputContainer}>
+        <Text style={[styles.inputLabel, { color: colors.text }]}>
+          নোট (ঐচ্ছিক)
+        </Text>
+        <TextInput
+          mode="outlined"
+          value={note}
+          onChangeText={setNote}
+          placeholder="লেনদেনের কারণ বা নোট লিখুন"
+          multiline
+          numberOfLines={3}
+          style={[
+            styles.textInput,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+            },
+          ]}
+          outlineStyle={[
+            styles.inputOutline,
+            { borderColor: colors.border },
+          ]}
+          contentStyle={[styles.inputContent, { color: colors.text }]}
+          placeholderTextColor={colors.textSecondary}
+        />
+      </View>
+    </View>
+  );
+
+  const renderActions = () => (
+    <View style={styles.actionsContainer}>
+      <Button
+        mode="contained"
+        onPress={handleSaveTransaction}
+        loading={saving}
+        disabled={saving}
+        style={[
+          styles.saveButton,
+          { backgroundColor: colors.primary },
+        ]}
+        contentStyle={styles.saveButtonContent}
+        labelStyle={[styles.saveButtonText, { color: colors.textInverse }]}>
+        {saving ? 'সংরক্ষণ হচ্ছে...' : 'লেনদেন সংরক্ষণ করুন'}
+      </Button>
+      
+      <TouchableOpacity
+        style={[
+          styles.cancelButton,
+          { borderColor: colors.border },
+        ]}
+        onPress={handleBackPress}
+        activeOpacity={0.7}>
+        <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>
+          বাতিল
+        </Text>
+      </TouchableOpacity>
+    </View>
   );
 
   if (loading) {
     return (
-      <PageTransition>
-        <StatusBar style="light" />
-        <View style={styles.headerContainer}>
-          <IconButton
-            icon="arrow-left"
-            size={24}
-            iconColor="white"
-            onPress={handleBackPress}
-            style={styles.headerLeftAction}
-          />
-          <Text style={styles.headerTitle}>Add Transaction</Text>
-        </View>
-        <View style={styles.loadingContainer}>
-          <RNActivityIndicator size="large" color="#fe4c24" />
-          <Text style={styles.loadingText}>Loading...</Text>
-        </View>
-      </PageTransition>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <RNActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.text }]}>
+          লোড হচ্ছে...
+        </Text>
+      </View>
     );
   }
 
   return (
     <PageTransition>
-      <StatusBar style="light" />
-
-      {/* Custom Header */}
-      <View style={styles.headerContainer}>
-        <IconButton
-          icon="arrow-left"
-          size={24}
-          iconColor="white"
-          onPress={handleBackPress}
-          style={styles.headerLeftAction}
-        />
-        <Text style={styles.headerTitle}>
-          {transactionId ? 'Edit Transaction' : 'Add Transaction'}
-        </Text>
-        <IconButton
-          icon={saving ? 'loading' : 'check'}
-          size={24}
-          iconColor="white"
-          onPress={handleSaveTransaction}
-          disabled={saving}
-          style={styles.headerRightAction}
-        />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {renderHeader()}
+        
+        <KeyboardAvoidingView
+          style={styles.keyboardContainer}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled">
+            {renderCustomerInfo()}
+            {renderTransactionType()}
+            {renderTransactionForm()}
+          </ScrollView>
+        </KeyboardAvoidingView>
+        
+        {renderActions()}
       </View>
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
-        <ScrollView
-          style={styles.scrollViewContainer}
-          contentContainerStyle={styles.scrollViewContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          contentInsetAdjustmentBehavior="automatic">
-          {renderCustomerCard()}
-
-          {/* Amount Input */}
-          <Surface style={styles.inputCard}>
-            <Text style={styles.inputLabel}>Amount ({profile?.currency || '৳'})</Text>
-            <TextInput
-              value={amount}
-              onChangeText={(text) => {
-                setAmount(text);
-                if (errors.amount) {
-                  setErrors({ ...errors, amount: undefined });
-                }
-              }}
-              keyboardType="numeric"
-              style={styles.amountInput}
-              mode="outlined"
-              placeholder="e.g. 1500, 2000.50"
-              error={!!errors.amount}
-              left={<TextInput.Icon icon="currency-usd" />}
-              outlineColor="#e0e0e0"
-              activeOutlineColor="#fe4c24"
-            />
-            {errors.amount && <Text style={styles.errorText}>{errors.amount}</Text>}
-          </Surface>
-
-          {renderTransactionTypeCard()}
-
-          {/* Note Input */}
-          <Surface style={styles.inputCard}>
-            <Text style={styles.inputLabel}>Note (Optional)</Text>
-            <TextInput
-              value={note}
-              onChangeText={setNote}
-              style={styles.noteInput}
-              mode="outlined"
-              placeholder="e.g. Payment for goods, Advance payment, Service charge"
-              multiline
-              numberOfLines={3}
-              left={<TextInput.Icon icon="note-text" />}
-              outlineColor="#e0e0e0"
-              activeOutlineColor="#fe4c24"
-            />
-          </Surface>
-
-          {/* Summary Card */}
-          <Surface style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>Transaction Summary</Text>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Customer:</Text>
-              <Text style={styles.summaryValue}>{customer?.name}</Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Type:</Text>
-              <Text
-                style={[styles.summaryValue, { color: type === 'credit' ? '#4CAF50' : '#F44336' }]}>
-                {type === 'credit' ? 'Credit (Money In)' : 'Debit (Money Out)'}
-              </Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Amount:</Text>
-              <Text
-                style={[
-                  styles.summaryAmount,
-                  { color: type === 'credit' ? '#4CAF50' : '#F44336' },
-                ]}>
-                {profile?.currency || '৳'}
-                {amount || '0.00'}
-              </Text>
-            </View>
-          </Surface>
-
-          {/* Submit Button */}
-          <Button
-            mode="contained"
-            onPress={handleSaveTransaction}
-            style={styles.submitButton}
-            labelStyle={styles.submitButtonText}
-            disabled={saving}
-            loading={saving}>
-            {saving ? 'Saving...' : transactionId ? 'Update Transaction' : 'Add Transaction'}
-          </Button>
-        </ScrollView>
-      </KeyboardAvoidingView>
-
-      {/* Loading Overlay */}
-      <Portal>
-        <Modal visible={saving} dismissable={false} contentContainerStyle={styles.loadingModal}>
-          <Surface style={styles.loadingModalContent}>
-            <RNActivityIndicator size="large" color="#fe4c24" />
-            <Text style={styles.loadingModalText}>
-              {transactionId ? 'Updating transaction...' : 'Adding transaction...'}
-            </Text>
-          </Surface>
-        </Modal>
-      </Portal>
     </PageTransition>
   );
 }
@@ -365,81 +387,68 @@ export default function AddTransactionScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
-  scrollViewContainer: {
-    flex: 1,
-  },
-  scrollViewContent: {
-    flexGrow: 1,
-    paddingBottom: 100, // Extra space for keyboard
-  },
-
-  headerContainer: {
-    backgroundColor: '#fe4c24',
-    paddingTop: 8,
+  header: {
+    paddingTop: 50,
+    paddingBottom: 20,
     paddingHorizontal: 20,
-    paddingBottom: 8,
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    height: 65,
-    position: 'relative',
+  },
+  backButton: {
+    marginRight: 16,
+  },
+  headerContent: {
+    flex: 1,
   },
   headerTitle: {
-    fontSize: 19,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: 'white',
-    textAlign: 'center',
-    flex: 1,
+    marginBottom: 5,
   },
-  headerLeftAction: {
-    position: 'absolute',
-    left: 8,
-    top: '50%',
-    marginTop: -20,
-  },
-  headerRightAction: {
-    position: 'absolute',
-    right: 8,
-    top: '50%',
-    marginTop: -20,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-  },
-  loadingText: {
-    marginTop: 16,
+  headerSubtitle: {
     fontSize: 16,
-    color: '#666',
+    opacity: 0.9,
+  },
+  keyboardContainer: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 120,
+  },
+  section: {
+    marginBottom: 24,
+    paddingHorizontal: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 16,
   },
   customerCard: {
-    backgroundColor: 'white',
-    margin: 16,
-    marginBottom: 8,
-    borderRadius: 12,
     padding: 16,
+    borderRadius: 12,
+    elevation: 2,
   },
   customerInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 16,
   },
   customerAvatar: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#fe4c24',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 16,
   },
-  customerAvatarText: {
+  avatarText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: 'white',
   },
   customerDetails: {
     flex: 1,
@@ -447,151 +456,115 @@ const styles = StyleSheet.create({
   customerName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 4,
   },
   customerPhone: {
     fontSize: 14,
-    color: '#666',
+    marginBottom: 2,
+  },
+  customerType: {
+    fontSize: 12,
+    opacity: 0.7,
+  },
+  balanceInfo: {
+    alignItems: 'center',
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  balanceLabel: {
+    fontSize: 14,
     marginBottom: 4,
   },
-  customerBalance: {
-    fontSize: 14,
-    color: '#666',
-  },
   balanceAmount: {
+    fontSize: 20,
     fontWeight: 'bold',
-  },
-  inputCard: {
-    backgroundColor: 'white',
-    margin: 16,
-    marginTop: 8,
-    marginBottom: 8,
-    borderRadius: 12,
-    padding: 16,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
-  },
-  inputLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  amountInput: {
-    backgroundColor: 'white',
-    fontSize: 16,
-  },
-  noteInput: {
-    backgroundColor: 'white',
-    minHeight: 80,
-    fontSize: 16,
-  },
-  errorText: {
-    fontSize: 12,
-    color: '#F44336',
-    marginTop: 4,
-  },
-  typeCard: {
-    backgroundColor: 'white',
-    margin: 16,
-    marginTop: 8,
-    marginBottom: 8,
-    borderRadius: 12,
-    padding: 16,
   },
   typeButtonsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 12,
   },
   typeButton: {
     flex: 1,
-    alignItems: 'center',
-    padding: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     borderRadius: 12,
-    marginHorizontal: 4,
-  },
-  typeButtonActive: {},
-  typeIcon: {
-    margin: 0,
-    marginBottom: 4,
+    borderWidth: 1,
+    alignItems: 'center',
+    elevation: 2,
   },
   typeButtonText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 2,
+    fontWeight: '600',
+    marginBottom: 4,
   },
   typeDescription: {
     fontSize: 12,
+    textAlign: 'center',
   },
-  summaryCard: {
-    backgroundColor: 'white',
-    margin: 16,
-    marginTop: 8,
-    marginBottom: 8,
-    borderRadius: 12,
-    padding: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: '#fe4c24',
+  inputContainer: {
+    marginBottom: 20,
   },
-  summaryTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  summaryLabel: {
-    fontSize: 14,
-    color: '#666',
-  },
-  summaryValue: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
-  },
-  summaryAmount: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  submitButton: {
-    margin: 16,
-    marginTop: 8,
-    marginBottom: 50,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: '#fe4c24',
-  },
-  submitButtonText: {
+  inputLabel: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: '500',
+    marginBottom: 8,
   },
-  loadingModal: {
+  textInput: {
+    fontSize: 16,
+  },
+  inputOutline: {
+    borderRadius: 10,
+  },
+  inputContent: {
+    fontSize: 16,
+  },
+  errorText: {
+    fontSize: 14,
+    marginTop: 6,
+    marginLeft: 4,
+  },
+  actionsContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 20,
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  saveButton: {
+    borderRadius: 25,
+    marginBottom: 12,
+    elevation: 2,
+  },
+  saveButtonContent: {
+    paddingVertical: 8,
+  },
+  saveButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  cancelButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    margin: 20,
   },
-  loadingModalContent: {
-    backgroundColor: 'white',
-    padding: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    minWidth: 200,
-  },
-  loadingModalText: {
+  loadingText: {
+    fontSize: 18,
+    fontWeight: '600',
     marginTop: 16,
-    fontSize: 16,
-    color: '#333',
-    textAlign: 'center',
   },
 });

@@ -7,14 +7,7 @@ export default function AppInfoLayout() {
     <>
       <Stack.Screen
         options={{
-          title: 'App Information',
-          headerStyle: {
-            backgroundColor: '#fe4c24',
-          },
-          headerTintColor: '#ffffff',
-          headerTitleStyle: {
-            fontWeight: 'bold',
-          },
+          headerShown: false,
         }}
       />
       <AppInfoScreen />

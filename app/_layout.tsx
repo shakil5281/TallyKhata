@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Stack } from 'expo-router';
 import { PaperProvider } from 'react-native-paper';
+import { StatusBar as RNStatusBar, Platform } from 'react-native';
 import '../global.css';
 
 import { ThemeProvider, useTheme } from '~/context/ThemeContext';
@@ -11,6 +12,14 @@ import { initDB, initializeDefaultProfile } from '~/lib/db';
 function AppContent() {
   const { theme } = useTheme();
   const [isInitializing, setIsInitializing] = useState(true);
+
+  // Set StatusBar immediately
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      RNStatusBar.setBackgroundColor(theme.custom.colors.primary, true);
+      RNStatusBar.setBarStyle('light-content', true);
+    }
+  }, [theme.custom.colors.primary]);
 
   // Memoize the callback to prevent infinite re-renders
   const handleAnimationComplete = useCallback(() => {
@@ -47,6 +56,11 @@ function AppContent() {
   if (isInitializing) {
     return (
       <PaperProvider theme={theme}>
+        <RNStatusBar
+          barStyle="light-content"
+          backgroundColor={theme.custom.colors.primary}
+          translucent={false}
+        />
         <ToastProvider>
           <SplashScreen
             onAnimationComplete={handleAnimationComplete}
@@ -60,15 +74,22 @@ function AppContent() {
 
   return (
     <PaperProvider theme={theme}>
+      <RNStatusBar
+        barStyle="light-content"
+        backgroundColor={theme.custom.colors.primary}
+        translucent={false}
+      />
       <ToastProvider>
         <Stack
           screenOptions={{
             headerShown: false,
             animation: 'slide_from_right',
-            animationDuration: 200,
+            animationDuration: 300,
             animationTypeForReplace: 'push',
             gestureEnabled: true,
             gestureDirection: 'horizontal',
+            contentStyle: { backgroundColor: 'transparent' },
+            presentation: 'transparentModal',
           }}>
           <Stack.Screen name="index" />
           <Stack.Screen name="add-customer/index" />
@@ -84,7 +105,7 @@ function AppContent() {
   );
 }
 
-export default function Layout() {
+export default function RootLayout() {
   return (
     <ThemeProvider>
       <AppContent />

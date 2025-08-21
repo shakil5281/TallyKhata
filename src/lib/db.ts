@@ -3,65 +3,79 @@ import * as SQLite from 'expo-sqlite';
 let db: SQLite.SQLiteDatabase;
 
 export const initDB = async () => {
-  // Ensure database is initialized only once
-  if (!db) {
-    db = await SQLite.openDatabaseAsync('tally.db');
-    console.log('Database initialized');
+  try {
+    // Ensure database is initialized only once
+    if (!db) {
+      db = await SQLite.openDatabaseAsync('tally.db');
+      console.log('Database initialized');
+    }
+
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS customers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        phone TEXT,
+        type TEXT,
+        photo TEXT,
+        total_balance REAL DEFAULT 0
+      );
+
+      CREATE TABLE IF NOT EXISTS transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        customer_id INTEGER,
+        type TEXT,
+        amount REAL,
+        note TEXT,
+        date TEXT DEFAULT (datetime('now', 'localtime')),
+        created_at TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS user_profile (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        name TEXT NOT NULL DEFAULT 'User',
+        phone TEXT,
+        email TEXT,
+        business_name TEXT,
+        address TEXT,
+        profile_image TEXT,
+        currency TEXT DEFAULT '৳',
+        dark_mode INTEGER DEFAULT 0,
+        notifications_enabled INTEGER DEFAULT 1,
+        backup_enabled INTEGER DEFAULT 1,
+        created_at TEXT DEFAULT (datetime('now', 'localtime')),
+        updated_at TEXT DEFAULT (datetime('now', 'localtime'))
+      );
+
+      CREATE TABLE IF NOT EXISTS app_settings (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        app_version TEXT DEFAULT '1.0.0',
+        language TEXT DEFAULT 'en',
+        theme_color TEXT DEFAULT '#fe4c24',
+        auto_backup INTEGER DEFAULT 1,
+        backup_frequency TEXT DEFAULT 'daily',
+        data_retention_days INTEGER DEFAULT 365,
+        created_at TEXT DEFAULT (datetime('now', 'localtime')),
+        updated_at TEXT DEFAULT (datetime('now', 'localtime'))
+      );
+    `);
+
+    // Run database migrations
+    await runMigrations();
+
+    // Ensure data consistency
+    await ensureTransactionDataConsistency();
+
+    // Validate database integrity
+    await validateDatabaseIntegrity();
+
+    // Initialize default profile and settings
+    await initializeDefaultProfile();
+    
+    console.log('✅ Database initialization completed successfully');
+  } catch (error) {
+    console.error('❌ Database initialization failed:', error);
+    throw new Error('Failed to initialize database');
   }
-
-  await db.execAsync(`
-    CREATE TABLE IF NOT EXISTS customers (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      phone TEXT,
-      type TEXT,
-      photo TEXT,
-      total_balance REAL DEFAULT 0
-    );
-
-    CREATE TABLE IF NOT EXISTS transactions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      customer_id INTEGER,
-      type TEXT,
-      amount REAL,
-      note TEXT,
-      date TEXT DEFAULT (datetime('now', 'localtime'))
-    );
-
-    CREATE TABLE IF NOT EXISTS user_profile (
-      id INTEGER PRIMARY KEY CHECK (id = 1),
-      name TEXT NOT NULL DEFAULT 'User',
-      phone TEXT,
-      email TEXT,
-      business_name TEXT,
-      address TEXT,
-      profile_image TEXT,
-      currency TEXT DEFAULT '৳',
-      dark_mode INTEGER DEFAULT 0,
-      notifications_enabled INTEGER DEFAULT 1,
-      backup_enabled INTEGER DEFAULT 1,
-      created_at TEXT DEFAULT (datetime('now', 'localtime')),
-      updated_at TEXT DEFAULT (datetime('now', 'localtime'))
-    );
-
-    CREATE TABLE IF NOT EXISTS app_settings (
-      id INTEGER PRIMARY KEY CHECK (id = 1),
-      app_version TEXT DEFAULT '1.0.0',
-      language TEXT DEFAULT 'en',
-      theme_color TEXT DEFAULT '#fe4c24',
-      auto_backup INTEGER DEFAULT 1,
-      backup_frequency TEXT DEFAULT 'daily',
-      data_retention_days INTEGER DEFAULT 365,
-      created_at TEXT DEFAULT (datetime('now', 'localtime')),
-      updated_at TEXT DEFAULT (datetime('now', 'localtime'))
-    );
-  `);
-
-  // Run database migrations
-  await runMigrations();
-
-  // Initialize default profile and settings
-  await initializeDefaultProfile();
 };
 
 // Database migration function
@@ -75,6 +89,30 @@ const runMigrations = async () => {
       console.log('🔄 Running database migration: Adding photo column to customers table');
       await db.execAsync('ALTER TABLE customers ADD COLUMN photo TEXT');
       console.log('✅ Migration completed: photo column added');
+    }
+
+    // Check if created_at column exists in transactions table
+    const transactionTableInfo = await db.getAllAsync('PRAGMA table_info(transactions)');
+    const hasCreatedAtColumn = transactionTableInfo.some((col: any) => col.name === 'created_at');
+
+    if (!hasCreatedAtColumn) {
+      console.log('🔄 Running database migration: Adding created_at column to transactions table');
+      
+      try {
+        // Add the column without default value
+        await db.execAsync('ALTER TABLE transactions ADD COLUMN created_at TEXT');
+        
+        // Update existing records to have created_at = date
+        await db.execAsync('UPDATE transactions SET created_at = date WHERE created_at IS NULL');
+        
+        // Set default value for any remaining NULL records
+        await db.execAsync('UPDATE transactions SET created_at = datetime("now", "localtime") WHERE created_at IS NULL');
+        
+        console.log('✅ Migration completed: created_at column added to transactions');
+      } catch (migrationError) {
+        console.error('❌ Migration failed for created_at column:', migrationError);
+        // Continue with other migrations even if this one fails
+      }
     }
   } catch (error) {
     console.error('❌ Migration failed:', error);
@@ -98,7 +136,7 @@ const runMigrations = async () => {
 type CustomerInput = {
   name: string;
   phone: string;
-  type: 'Customer' | 'Supplier';
+  type: string;
   photo?: string;
 };
 
@@ -107,7 +145,7 @@ export const addCustomer = async ({ name, phone, type, photo }: CustomerInput) =
     if (!db) await initDB(); // Ensure DB is initialized
 
     // Insert the customer into the database
-    await db.runAsync('INSERT INTO customers (name, phone, type, photo) VALUES (?, ?, ?, ?)', [
+    const result = await db.runAsync('INSERT INTO customers (name, phone, type, photo) VALUES (?, ?, ?, ?)', [
       name,
       phone,
       type,
@@ -115,19 +153,33 @@ export const addCustomer = async ({ name, phone, type, photo }: CustomerInput) =
     ]);
 
     console.log('Customer added successfully');
+    return result.lastInsertRowId;
   } catch (err) {
     console.error('Failed to add customer:', err);
+    throw new Error('Failed to add customer');
   }
 };
 
 export const getCustomers = async () => {
   if (!db) await initDB();
-  return await db.getAllAsync('SELECT * FROM customers');
+  
+  try {
+    return await db.getAllAsync('SELECT * FROM customers');
+  } catch (err) {
+    console.error('Failed to get customers:', err);
+    return [];
+  }
 };
 
 export const getCustomerById = async (id: number) => {
   if (!db) await initDB();
-  return await db.getFirstAsync('SELECT * FROM customers WHERE id = ?', [id]);
+  
+  try {
+    return await db.getFirstAsync('SELECT * FROM customers WHERE id = ?', [id]);
+  } catch (err) {
+    console.error('Failed to get customer by ID:', err);
+    return null;
+  }
 };
 
 export const updateCustomerPhoto = async (customerId: number, photoUri: string) => {
@@ -181,9 +233,22 @@ export const addTransaction = async (
   if (!db) await initDB();
 
   try {
+    // Validate inputs
+    if (!customer_id || customer_id <= 0) {
+      throw new Error('Invalid customer ID');
+    }
+    
+    if (!type || !['credit', 'debit'].includes(type)) {
+      throw new Error('Invalid transaction type');
+    }
+    
+    if (!amount || amount <= 0 || isNaN(amount)) {
+      throw new Error('Invalid amount');
+    }
+
     // Insert the new transaction
     await db.runAsync(
-      'INSERT INTO transactions (customer_id, type, amount, note) VALUES (?, ?, ?, ?)',
+      'INSERT INTO transactions (customer_id, type, amount, note, created_at) VALUES (?, ?, ?, ?, datetime("now", "localtime"))',
       [customer_id, type, amount, note]
     );
 
@@ -196,14 +261,41 @@ export const addTransaction = async (
     await db.runAsync(balanceUpdateQuery, [amount, customer_id]);
 
     console.log('Transaction added and balance updated successfully');
+    return true;
   } catch (err) {
     console.error('Failed to add transaction or update balance:', err);
+    throw err;
   }
 };
 
 export const deleteTransaction = async (transactionId: number) => {
   if (!db) await initDB();
-  await db.runAsync('DELETE FROM transactions WHERE id = ?', [transactionId]);
+  
+  try {
+    // First get the transaction details to update balance
+    const transaction = await db.getFirstAsync(
+      'SELECT customer_id, type, amount FROM transactions WHERE id = ?',
+      [transactionId]
+    );
+    
+    if (transaction) {
+      // Delete the transaction
+      await db.runAsync('DELETE FROM transactions WHERE id = ?', [transactionId]);
+      
+      // Update the customer's total balance (reverse the transaction)
+      const balanceUpdateQuery =
+        transaction.type === 'credit'
+          ? 'UPDATE customers SET total_balance = total_balance - ? WHERE id = ?'
+          : 'UPDATE customers SET total_balance = total_balance + ? WHERE id = ?';
+
+      await db.runAsync(balanceUpdateQuery, [transaction.amount, transaction.customer_id]);
+      
+      console.log('Transaction deleted and balance updated successfully');
+    }
+  } catch (err) {
+    console.error('Failed to delete transaction:', err);
+    throw err;
+  }
 };
 
 // Modify this function to support pagination
@@ -373,6 +465,45 @@ export const resetDatabaseToFresh = async (): Promise<boolean> => {
       console.error('❌ Recovery failed:', recoveryError);
     }
 
+    return false;
+  }
+};
+
+// Safe database reset function
+export const safeResetDatabase = async () => {
+  if (!db) await initDB();
+
+  try {
+    console.log('🔄 Starting safe database reset...');
+    
+    // Start transaction
+    await db.execAsync('BEGIN TRANSACTION');
+    
+    try {
+      // Clear all data
+      await db.execAsync('DELETE FROM transactions');
+      await db.execAsync('DELETE FROM customers');
+      await db.execAsync('DELETE FROM user_profile');
+      await db.execAsync('DELETE FROM app_settings');
+      
+      // Reset auto-increment counters
+      await db.execAsync('DELETE FROM sqlite_sequence');
+      
+      // Commit transaction
+      await db.execAsync('COMMIT');
+      
+      // Reinitialize default profile and settings
+      await initializeDefaultProfile();
+      
+      console.log('✅ Safe database reset completed successfully');
+      return true;
+    } catch (resetError) {
+      // Rollback on error
+      await db.execAsync('ROLLBACK');
+      throw resetError;
+    }
+  } catch (error) {
+    console.error('❌ Safe database reset failed:', error);
     return false;
   }
 };
@@ -957,5 +1088,393 @@ export const getTopCustomersReport = async (startDate?: string, endDate?: string
   } catch (error) {
     console.error('Error getting top customers report:', error);
     return [];
+  }
+};
+
+// Get transactions by customer ID
+export const getTransactionsByCustomerId = async (customerId: number) => {
+  if (!db) await initDB();
+
+  try {
+    // Validate customer ID
+    if (!customerId || customerId <= 0) {
+      console.warn('Invalid customer ID provided:', customerId);
+      return [];
+    }
+
+    const transactions = await db.getAllAsync(
+      `SELECT 
+        id,
+        customer_id as customerId,
+        type,
+        amount,
+        note,
+        COALESCE(created_at, date) as createdAt
+      FROM transactions 
+      WHERE customer_id = ? 
+      ORDER BY COALESCE(created_at, date) DESC`,
+      [customerId]
+    );
+
+    // Ensure all transactions have valid data
+    return transactions.map(transaction => ({
+      ...transaction,
+      createdAt: transaction.createdAt || new Date().toISOString(),
+      amount: parseFloat(transaction.amount) || 0,
+      type: transaction.type || 'credit'
+    }));
+  } catch (error) {
+    console.error('Error getting transactions by customer ID:', error);
+    return [];
+  }
+};
+
+// Delete customer and all associated transactions
+export const deleteCustomer = async (customerId: number): Promise<boolean> => {
+  if (!db) await initDB();
+
+  try {
+    console.log(`🗑️ Deleting customer with ID: ${customerId}`);
+    
+    // Start transaction
+    await db.execAsync('BEGIN TRANSACTION');
+    
+    // Delete all transactions for this customer
+    await db.runAsync(
+      'DELETE FROM transactions WHERE customer_id = ?',
+      [customerId]
+    );
+    
+    // Delete the customer
+    await db.runAsync(
+      'DELETE FROM customers WHERE id = ?',
+      [customerId]
+    );
+    
+    // Commit transaction
+    await db.execAsync('COMMIT');
+    
+    console.log(`✅ Customer ${customerId} and all transactions deleted successfully`);
+    return true;
+    
+  } catch (error) {
+    console.error('❌ Error deleting customer:', error);
+    
+    // Rollback transaction on error
+    try {
+      await db.execAsync('ROLLBACK');
+    } catch (rollbackError) {
+      console.error('❌ Error rolling back transaction:', rollbackError);
+    }
+    
+    throw new Error('Failed to delete customer');
+  }
+};
+
+// Clear all database data
+export const clearDatabase = async (): Promise<void> => {
+  if (!db) await initDB();
+
+  try {
+    console.log('🗑️ Starting database clear...');
+    
+    // Clear all tables
+    await db.execAsync('DELETE FROM transactions');
+    await db.execAsync('DELETE FROM customers');
+    await db.execAsync('DELETE FROM user_profile');
+    await db.execAsync('DELETE FROM app_settings');
+    
+    console.log('✅ All data cleared from database');
+    
+    // Reset auto-increment counters
+    await db.execAsync('DELETE FROM sqlite_sequence');
+    
+    // Reinitialize default profile and settings
+    await initializeDefaultProfile();
+    
+    console.log('✅ Database reset complete with default profile');
+    
+  } catch (error) {
+    console.error('❌ Error clearing database:', error);
+    throw new Error('Failed to clear database');
+  }
+};
+
+// Ensure data consistency for transactions
+export const ensureTransactionDataConsistency = async () => {
+  if (!db) await initDB();
+
+  try {
+    console.log('🔄 Ensuring transaction data consistency...');
+    
+    // Update any transactions without created_at to use date
+    await db.execAsync(`
+      UPDATE transactions 
+      SET created_at = date 
+      WHERE created_at IS NULL AND date IS NOT NULL
+    `);
+    
+    // Update any remaining transactions without created_at to use current time
+    await db.execAsync(`
+      UPDATE transactions 
+      SET created_at = datetime('now', 'localtime') 
+      WHERE created_at IS NULL
+    `);
+    
+    console.log('✅ Transaction data consistency ensured');
+  } catch (error) {
+    console.error('❌ Error ensuring transaction data consistency:', error);
+  }
+};
+
+// Database recovery function
+export const recoverDatabase = async () => {
+  if (!db) await initDB();
+
+  try {
+    console.log('🔄 Starting database recovery...');
+    
+    // Check and repair customers table
+    const customerCount = await db.getFirstAsync('SELECT COUNT(*) as count FROM customers');
+    console.log(`📊 Customers table: ${customerCount?.count || 0} records`);
+    
+    // Check and repair transactions table
+    const transactionCount = await db.getFirstAsync('SELECT COUNT(*) as count FROM transactions');
+    console.log(`📊 Transactions table: ${transactionCount?.count || 0} records`);
+    
+    // Ensure all transactions have valid created_at values
+    await ensureTransactionDataConsistency();
+    
+    // Check for orphaned transactions (transactions without valid customers)
+    const orphanedTransactions = await db.getAllAsync(`
+      SELECT t.id FROM transactions t 
+      LEFT JOIN customers c ON t.customer_id = c.id 
+      WHERE c.id IS NULL
+    `);
+    
+    if (orphanedTransactions.length > 0) {
+      console.log(`⚠️ Found ${orphanedTransactions.length} orphaned transactions, cleaning up...`);
+      await db.execAsync('DELETE FROM transactions WHERE customer_id NOT IN (SELECT id FROM customers)');
+    }
+    
+    console.log('✅ Database recovery completed successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Database recovery failed:', error);
+    return false;
+  }
+};
+
+// Validate database integrity
+export const validateDatabaseIntegrity = async () => {
+  if (!db) await initDB();
+
+  try {
+    console.log('🔍 Validating database integrity...');
+    
+    const issues: string[] = [];
+    
+    // Check customers table
+    try {
+      const customerCount = await db.getFirstAsync('SELECT COUNT(*) as count FROM customers');
+      if (customerCount?.count !== undefined) {
+        console.log(`✅ Customers table: ${customerCount.count} records`);
+      }
+    } catch (error) {
+      issues.push('Customers table access failed');
+    }
+    
+    // Check transactions table
+    try {
+      const transactionCount = await db.getFirstAsync('SELECT COUNT(*) as count FROM transactions');
+      if (transactionCount?.count !== undefined) {
+        console.log(`✅ Transactions table: ${transactionCount.count} records`);
+      }
+    } catch (error) {
+      issues.push('Transactions table access failed');
+    }
+    
+    // Check for orphaned transactions
+    try {
+      const orphanedCount = await db.getFirstAsync(`
+        SELECT COUNT(*) as count FROM transactions t 
+        LEFT JOIN customers c ON t.customer_id = c.id 
+        WHERE c.id IS NULL
+      `);
+      
+      if (orphanedCount?.count > 0) {
+        issues.push(`${orphanedCount.count} orphaned transactions found`);
+      }
+    } catch (error) {
+      issues.push('Orphaned transaction check failed');
+    }
+    
+    // Check for transactions without created_at
+    try {
+      const missingCreatedAt = await db.getFirstAsync(`
+        SELECT COUNT(*) as count FROM transactions 
+        WHERE created_at IS NULL
+      `);
+      
+      if (missingCreatedAt?.count > 0) {
+        issues.push(`${missingCreatedAt.count} transactions missing created_at`);
+      }
+    } catch (error) {
+      issues.push('Created_at validation failed');
+    }
+    
+    if (issues.length === 0) {
+      console.log('✅ Database integrity validation passed');
+      return { valid: true, issues: [] };
+    } else {
+      console.warn('⚠️ Database integrity validation found issues:', issues);
+      return { valid: false, issues };
+    }
+  } catch (error) {
+    console.error('❌ Database integrity validation failed:', error);
+    return { valid: false, issues: ['Validation process failed'] };
+  }
+};
+
+// Get totals summary for home page
+export const getTotalsSummary = async () => {
+  try {
+    const result = await db.getAllAsync(`
+      SELECT 
+        COALESCE(SUM(CASE WHEN type = 'credit' THEN amount ELSE 0 END), 0) as total_receivable,
+        COALESCE(SUM(CASE WHEN type = 'debit' THEN amount ELSE 0 END), 0) as total_payable
+      FROM transactions
+    `);
+    
+    if (result && result.length > 0) {
+      const row = result[0];
+      const receivable = row.total_receivable || 0;
+      const payable = row.total_payable || 0;
+      const netBalance = receivable - payable;
+      
+      return {
+        total_receivable: receivable,  // দিলাম - আপনি পণ্য বিক্রি করেছেন, টাকা পাবেন
+        total_payable: payable,        // পেলাম - আপনি পণ্যের মূল্য পেয়েছেন
+        net_balance: netBalance        // নিট ব্যালেন্স
+      };
+    }
+    
+    return { total_receivable: 0, total_payable: 0, net_balance: 0 };
+  } catch (error) {
+    console.error('Error getting totals summary:', error);
+    return { total_receivable: 0, total_payable: 0, net_balance: 0 };
+  }
+};
+
+// Get detailed totals by customer
+export const getDetailedTotals = async (type?: 'receivable' | 'payable') => {
+  try {
+    let query = `
+      SELECT 
+        c.id,
+        c.name,
+        c.phone,
+        c.type as customer_type,
+        COALESCE(SUM(CASE WHEN t.type = 'credit' THEN t.amount ELSE 0 END), 0) as total_receivable,
+        COALESCE(SUM(CASE WHEN t.type = 'debit' THEN t.amount ELSE 0 END), 0) as total_payable,
+        (COALESCE(SUM(CASE WHEN t.type = 'credit' THEN t.amount ELSE 0 END), 0) - 
+         COALESCE(SUM(CASE WHEN t.type = 'debit' THEN t.amount ELSE 0 END), 0)) as net_balance
+      FROM customers c
+      LEFT JOIN transactions t ON c.id = t.customer_id
+      GROUP BY c.id, c.name, c.phone, c.type
+    `;
+    
+    if (type === 'receivable') {
+      query += ` HAVING total_receivable > total_payable`; // দিলাম বেশি - আপনি টাকা পাবেন
+    } else if (type === 'payable') {
+      query += ` HAVING total_payable > total_receivable`; // পেলাম বেশি - আপনার পাওনা পরিশোধ হয়েছে
+    }
+    
+    query += ` ORDER BY net_balance DESC`;
+    
+    const result = await db.getAllAsync(query);
+    return result || [];
+  } catch (error) {
+    console.error('Error getting detailed totals:', error);
+    return [];
+  }
+};
+
+// Get daily totals for charts
+export const getTotalsByDateRange = async (startDate: string, endDate: string) => {
+  try {
+    const result = await db.getAllAsync(`
+      SELECT 
+        DATE(COALESCE(t.created_at, t.date)) as date,
+        COALESCE(SUM(CASE WHEN t.type = 'credit' THEN t.amount ELSE 0 END), 0) as daily_receivable,
+        COALESCE(SUM(CASE WHEN t.type = 'debit' THEN t.amount ELSE 0 END), 0) as daily_payable
+      FROM transactions t
+      WHERE DATE(COALESCE(t.created_at, t.date)) BETWEEN ? AND ?
+      GROUP BY DATE(COALESCE(t.created_at, t.date))
+      ORDER BY date ASC
+    `, [startDate, endDate]);
+    
+    return result || [];
+  } catch (error) {
+    console.error('Error getting daily totals:', error);
+    return [];
+  }
+};
+
+// Export totals data for reports
+export const exportTotalsData = async (startDate?: string, endDate: string) => {
+  try {
+    let query = `
+      SELECT 
+        c.id,
+        c.name,
+        c.phone,
+        c.type as customer_type,
+        COALESCE(SUM(CASE WHEN t.type = 'credit' THEN t.amount ELSE 0 END), 0) as total_receivable,
+        COALESCE(SUM(CASE WHEN t.type = 'debit' THEN t.amount ELSE 0 END), 0) as total_payable,
+        (COALESCE(SUM(CASE WHEN t.type = 'credit' THEN t.amount ELSE 0 END), 0) - 
+         COALESCE(SUM(CASE WHEN t.type = 'debit' THEN t.amount ELSE 0 END), 0)) as net_balance
+      FROM customers c
+      LEFT JOIN transactions t ON c.id = t.customer_id
+    `;
+    
+    const params: any[] = [];
+    if (startDate && endDate) {
+      query += ` WHERE DATE(COALESCE(t.created_at, t.date)) BETWEEN ? AND ?`;
+      params.push(startDate, endDate);
+    }
+    
+    query += ` GROUP BY c.id, c.name, c.phone, c.type ORDER BY net_balance DESC`;
+    
+    const customers = await db.getAllAsync(query, params);
+    
+    // Get overall summary
+    const summaryQuery = `
+      SELECT 
+        COALESCE(SUM(CASE WHEN t.type = 'credit' THEN t.amount ELSE 0 END), 0) as total_receivable,
+        COALESCE(SUM(CASE WHEN t.type = 'debit' THEN t.amount ELSE 0 END), 0) as total_payable
+      FROM transactions t
+    `;
+    
+    const summaryParams: any[] = [];
+    if (startDate && endDate) {
+      summaryQuery += ` WHERE DATE(COALESCE(t.created_at, t.date)) BETWEEN ? AND ?`;
+      summaryParams.push(startDate, endDate);
+    }
+    
+    const summaryResult = await db.getAllAsync(summaryQuery, summaryParams);
+    const summary = summaryResult?.[0] || { total_receivable: 0, total_payable: 0 };
+    
+    return {
+      summary: {
+        total_receivable: summary.total_receivable,  // দিলাম - পণ্য বিক্রি, টাকা পাবেন
+        total_payable: summary.total_payable,        // পেলাম - মূল্য পেয়েছেন
+        net_balance: summary.total_receivable - summary.total_payable
+      },
+      customers: customers || []
+    };
+  } catch (error) {
+    console.error('Error exporting totals data:', error);
+    return { summary: { total_receivable: 0, total_payable: 0, net_balance: 0 }, customers: [] };
   }
 };

@@ -1,706 +1,442 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
-import { Text, Surface, IconButton, Chip, ActivityIndicator } from 'react-native-paper';
-import { StatusBar } from 'expo-status-bar';
-import { format, startOfMonth, endOfMonth, subMonths, addMonths, parseISO } from 'date-fns';
-import PageTransition from '../../components/PageTransition';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  RefreshControl,
+  Dimensions,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { IconButton, FAB } from 'react-native-paper';
+import { format, subDays, subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { bn } from 'date-fns/locale';
+import PageTransition from '../../components/PageTransition';
+import { useTheme } from '~/context/ThemeContext';
+import {
+  getDashboardStats,
   getDailyReport,
   getMonthlyReport,
   getMonthlySummary,
   getYearOverYearReport,
   getTopCustomersReport,
-  getUserProfile,
 } from '~/lib/db';
 
-interface ReportSummary {
-  totalTransactions: number;
-  totalCredit: number;
-  totalDebit: number;
-  netAmount: number;
-  uniqueCustomers: number;
-  activeDays?: number;
-}
+const { width: screenWidth } = Dimensions.get('window');
 
-const Cashbox: React.FC = () => {
-  const [reportType, setReportType] = useState<'daily' | 'monthly' | 'yearly' | 'top-customers'>(
-    'daily'
-  );
-  const [selectedDate, setSelectedDate] = useState(new Date());
+export default function CashboxScreen() {
   const [loading, setLoading] = useState(true);
-  const [profile, setProfile] = useState<any>(null);
-
-  // Report data states
-  const [dailyData, setDailyData] = useState<any>(null);
-  const [monthlyData, setMonthlyData] = useState<any[]>([]);
-  const [monthlySummary, setMonthlySummary] = useState<ReportSummary | null>(null);
-  const [yearlyData, setYearlyData] = useState<any[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
+  const [stats, setStats] = useState<any>(null);
+  const [dailyReport, setDailyReport] = useState<any[]>([]);
+  const [monthlyReport, setMonthlyReport] = useState<any[]>([]);
   const [topCustomers, setTopCustomers] = useState<any[]>([]);
+  const router = useRouter();
+  const { theme } = useTheme();
+  const { colors } = theme.custom;
 
-  const loadProfile = async () => {
+  const loadData = useCallback(async () => {
     try {
-      const userProfile = await getUserProfile();
-      setProfile(userProfile);
-    } catch (error) {
-      console.error('Error loading profile:', error);
-    }
-  };
+      setLoading(true);
+      const [statsData, dailyData, monthlyData, topCustomersData] = await Promise.all([
+        getDashboardStats(),
+        getDailyReport(format(new Date(), 'yyyy-MM-dd')),
+        getMonthlyReport(new Date().getFullYear(), new Date().getMonth() + 1),
+        getTopCustomersReport(),
+      ]);
 
-  const loadReports = useCallback(async () => {
-    setLoading(true);
-    try {
-      const today = format(selectedDate, 'yyyy-MM-dd');
-      const year = selectedDate.getFullYear();
-      const month = selectedDate.getMonth() + 1;
-
-      switch (reportType) {
-        case 'daily':
-          const daily = await getDailyReport(today);
-          setDailyData(daily);
-          break;
-
-        case 'monthly':
-          const monthly = await getMonthlyReport(year, month);
-          const summary = await getMonthlySummary(year, month);
-          setMonthlyData(monthly);
-          setMonthlySummary(summary);
-          break;
-
-        case 'yearly':
-          const yearly = await getYearOverYearReport(year);
-          setYearlyData(yearly);
-          break;
-
-        case 'top-customers':
-          const startOfCurrentMonth = format(startOfMonth(selectedDate), 'yyyy-MM-dd');
-          const endOfCurrentMonth = format(endOfMonth(selectedDate), 'yyyy-MM-dd');
-          const customers = await getTopCustomersReport(startOfCurrentMonth, endOfCurrentMonth, 10);
-          setTopCustomers(customers);
-          break;
-      }
+      setStats(statsData);
+      setDailyReport(dailyData?.transactions || []);
+      setMonthlyReport(monthlyData || []);
+      setTopCustomers(topCustomersData || []);
     } catch (error) {
       console.error('Error loading reports:', error);
-      Alert.alert('Error', 'Failed to load reports. Please try again.');
+      setStats(null);
+      setDailyReport([]);
+      setMonthlyReport([]);
+      setTopCustomers([]);
     } finally {
       setLoading(false);
     }
-  }, [selectedDate, reportType]);
+  }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  }, [loadData]);
 
   useEffect(() => {
-    loadProfile();
-    loadReports();
-  }, [selectedDate, reportType, loadReports]);
+    loadData();
+  }, [loadData]);
 
-  const navigateDate = (direction: 'prev' | 'next') => {
-    if (reportType === 'daily') {
-      const newDate = new Date(selectedDate);
-      newDate.setDate(newDate.getDate() + (direction === 'next' ? 1 : -1));
-      setSelectedDate(newDate);
-    } else if (reportType === 'monthly' || reportType === 'top-customers') {
-      const newDate =
-        direction === 'next' ? addMonths(selectedDate, 1) : subMonths(selectedDate, 1);
-      setSelectedDate(newDate);
-    } else if (reportType === 'yearly') {
-      const newDate = new Date(selectedDate);
-      newDate.setFullYear(newDate.getFullYear() + (direction === 'next' ? 1 : -1));
-      setSelectedDate(newDate);
-    }
-  };
-
-  const getDateDisplayText = () => {
-    switch (reportType) {
-      case 'daily':
-        return format(selectedDate, 'EEEE, MMMM d, yyyy');
-      case 'monthly':
-      case 'top-customers':
-        return format(selectedDate, 'MMMM yyyy');
-      case 'yearly':
-        return format(selectedDate, 'yyyy');
-      default:
-        return '';
-    }
-  };
+  const handleAddTransaction = () => router.push('/add-transaction');
+  const handleViewCustomers = () => router.push('/customers-list');
 
   const renderHeader = () => (
-    <View style={styles.headerContainer}>
-      <Text style={styles.headerTitle}>Reports & Analytics</Text>
-      <IconButton
-        icon="refresh"
-        size={24}
-        iconColor="white"
-        onPress={loadReports}
-        style={styles.headerRightAction}
-      />
+    <View style={[styles.header, { backgroundColor: colors.primary }]}>
+      <Text style={[styles.headerTitle, { color: colors.textInverse }]}>
+        রিপোর্ট
+      </Text>
+      <Text style={[styles.headerSubtitle, { color: colors.textInverse }]}>
+        আপনার ব্যবসার আর্থিক অবস্থা দেখুন
+      </Text>
     </View>
   );
 
-  const renderDateNavigation = () => (
-    <Surface style={styles.dateNavigation} elevation={0}>
-      <IconButton
-        icon="chevron-left"
-        size={24}
-        onPress={() => navigateDate('prev')}
-        iconColor="#fe4c24"
-      />
-      <Text style={styles.dateText}>{getDateDisplayText()}</Text>
-      <IconButton
-        icon="chevron-right"
-        size={24}
-        onPress={() => navigateDate('next')}
-        iconColor="#fe4c24"
-      />
-    </Surface>
-  );
-
-  const renderReportTypeSelector = () => (
-    <View style={styles.chipContainer}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {['daily', 'monthly', 'yearly', 'top-customers'].map((type) => (
-          <Chip
-            key={type}
-            selected={reportType === type}
-            onPress={() => setReportType(type as any)}
-            style={[styles.chip, reportType === type && styles.chipSelected]}
-            textStyle={[styles.chipText, reportType === type && styles.chipTextSelected]}>
-            {type === 'top-customers'
-              ? 'Top Customers'
-              : `${type.charAt(0).toUpperCase()}${type.slice(1)}`}
-          </Chip>
-        ))}
-      </ScrollView>
-    </View>
-  );
-
-  const renderSummaryCard = (
-    title: string,
-    value: string | number,
-    icon: string,
-    color: string
-  ) => (
-    <Surface style={styles.summaryCard} elevation={0}>
-      <IconButton icon={icon} size={24} iconColor={color} style={styles.summaryIcon} />
-      <Text style={styles.summaryValue}>{value}</Text>
-      <Text style={styles.summaryLabel}>{title}</Text>
-    </Surface>
-  );
-
-  const renderDailySummary = () => {
-    if (!dailyData) return null;
-
-    const { summary } = dailyData;
-    const currency = profile?.currency || '৳';
-
-    return (
-      <View style={styles.summaryContainer}>
-        {renderSummaryCard('Transactions', summary.totalTransactions, 'swap-horizontal', '#2196F3')}
-        {renderSummaryCard(
-          'Credit',
-          `${currency}${summary.totalCredit.toFixed(0)}`,
-          'plus-circle',
-          '#4CAF50'
-        )}
-        {renderSummaryCard(
-          'Debit',
-          `${currency}${summary.totalDebit.toFixed(0)}`,
-          'minus-circle',
-          '#F44336'
-        )}
-        {renderSummaryCard(
-          'Net Amount',
-          `${currency}${summary.netAmount.toFixed(0)}`,
-          'currency-usd',
-          summary.netAmount >= 0 ? '#4CAF50' : '#F44336'
-        )}
-      </View>
-    );
-  };
-
-  const renderMonthlySummary = () => {
-    if (!monthlySummary) return null;
-
-    const currency = profile?.currency || '৳';
-
-    return (
-      <View style={styles.summaryContainer}>
-        {renderSummaryCard(
-          'Transactions',
-          monthlySummary.totalTransactions,
-          'swap-horizontal',
-          '#2196F3'
-        )}
-        {renderSummaryCard(
-          'Credit',
-          `${currency}${monthlySummary.totalCredit.toFixed(0)}`,
-          'plus-circle',
-          '#4CAF50'
-        )}
-        {renderSummaryCard(
-          'Debit',
-          `${currency}${monthlySummary.totalDebit.toFixed(0)}`,
-          'minus-circle',
-          '#F44336'
-        )}
-        {renderSummaryCard('Active Days', monthlySummary.activeDays || 0, 'calendar', '#FF9800')}
-      </View>
-    );
-  };
-
-  const renderDailyTransactions = () => {
-    if (!dailyData?.transactions.length) {
-      return (
-        <Surface style={styles.emptyCard} elevation={0}>
-          <Text style={styles.emptyText}>No transactions found for this date</Text>
-        </Surface>
-      );
-    }
-
-    return (
-      <View style={styles.transactionsContainer}>
-        <Text style={styles.sectionTitle}>Transactions</Text>
-        {dailyData.transactions.map((transaction: any, index: number) => (
-          <Surface key={index} style={styles.transactionCard} elevation={0}>
-            <View style={styles.transactionInfo}>
-              <Text style={styles.transactionCustomer}>
-                {transaction.customer_name || 'Unknown'}
-              </Text>
-              <Text style={styles.transactionNote}>{transaction.note || 'No description'}</Text>
-              <Text style={styles.transactionTime}>
-                {format(parseISO(transaction.date), 'HH:mm')}
-              </Text>
-            </View>
-            <View style={styles.transactionAmount}>
-              <Text
-                style={[
-                  styles.transactionAmountText,
-                  { color: transaction.type === 'credit' ? '#4CAF50' : '#F44336' },
-                ]}>
-                {transaction.type === 'credit' ? '+' : '-'}
-                {profile?.currency || '৳'}
-                {transaction.amount.toFixed(0)}
-              </Text>
-              <Text style={styles.transactionType}>
-                {transaction.type === 'credit' ? 'Credit' : 'Debit'}
-              </Text>
-            </View>
-          </Surface>
-        ))}
-      </View>
-    );
-  };
-
-  const renderMonthlyChart = () => {
-    if (!monthlyData.length) {
-      return (
-        <Surface style={styles.emptyCard} elevation={0}>
-          <Text style={styles.emptyText}>No data available for this month</Text>
-        </Surface>
-      );
-    }
-
-    return (
-      <View style={styles.chartContainer}>
-        <Text style={styles.sectionTitle}>Daily Breakdown</Text>
-        {monthlyData.map((day, index) => (
-          <Surface key={index} style={styles.chartItem} elevation={0}>
-            <View style={styles.chartDate}>
-              <Text style={styles.chartDateText}>{format(parseISO(day.date), 'dd')}</Text>
-              <Text style={styles.chartDayText}>{format(parseISO(day.date), 'EEE')}</Text>
-            </View>
-            <View style={styles.chartData}>
-              <Text style={styles.chartTransactions}>{day.totalTransactions} transactions</Text>
-              <View style={styles.chartAmounts}>
-                <Text style={styles.chartCredit}>
-                  +{profile?.currency || '৳'}
-                  {day.totalCredit.toFixed(0)}
-                </Text>
-                <Text style={styles.chartDebit}>
-                  -{profile?.currency || '৳'}
-                  {day.totalDebit.toFixed(0)}
-                </Text>
-              </View>
-            </View>
-            <Text style={[styles.chartNet, { color: day.netAmount >= 0 ? '#4CAF50' : '#F44336' }]}>
-              {day.netAmount >= 0 ? '+' : ''}
-              {profile?.currency || '৳'}
-              {day.netAmount.toFixed(0)}
-            </Text>
-          </Surface>
-        ))}
-      </View>
-    );
-  };
-
-  const renderYearlyChart = () => {
-    if (!yearlyData.length) {
-      return (
-        <Surface style={styles.emptyCard} elevation={0}>
-          <Text style={styles.emptyText}>No data available for this year</Text>
-        </Surface>
-      );
-    }
-
-    return (
-      <View style={styles.chartContainer}>
-        <Text style={styles.sectionTitle}>Monthly Breakdown</Text>
-        {yearlyData.map((month, index) => (
-          <Surface key={index} style={styles.chartItem} elevation={0}>
-            <View style={styles.chartDate}>
-              <Text style={styles.chartDateText}>{month.monthName.substring(0, 3)}</Text>
-              <Text style={styles.chartDayText}>Month</Text>
-            </View>
-            <View style={styles.chartData}>
-              <Text style={styles.chartTransactions}>{month.totalTransactions} transactions</Text>
-              <View style={styles.chartAmounts}>
-                <Text style={styles.chartCredit}>
-                  +{profile?.currency || '৳'}
-                  {month.totalCredit.toFixed(0)}
-                </Text>
-                <Text style={styles.chartDebit}>
-                  -{profile?.currency || '৳'}
-                  {month.totalDebit.toFixed(0)}
-                </Text>
-              </View>
-            </View>
+  const renderPeriodSelector = () => (
+    <View style={styles.periodContainer}>
+      <Text style={[styles.periodLabel, { color: colors.textSecondary }]}>
+        সময়কাল:
+      </Text>
+      <View style={styles.periodButtons}>
+        {[
+          { key: 'daily', label: 'দৈনিক' },
+          { key: 'weekly', label: 'সাপ্তাহিক' },
+          { key: 'monthly', label: 'মাসিক' },
+          { key: 'yearly', label: 'বাৎসরিক' },
+        ].map((period) => (
+          <TouchableOpacity
+            key={period.key}
+            onPress={() => setSelectedPeriod(period.key as any)}
+            style={[
+              styles.periodButton,
+              {
+                backgroundColor: selectedPeriod === period.key ? colors.primary : colors.surface,
+              },
+            ]}>
             <Text
-              style={[styles.chartNet, { color: month.netAmount >= 0 ? '#4CAF50' : '#F44336' }]}>
-              {month.netAmount >= 0 ? '+' : ''}
-              {profile?.currency || '৳'}
-              {month.netAmount.toFixed(0)}
+              style={[
+                styles.periodButtonText,
+                {
+                  color: selectedPeriod === period.key ? colors.textInverse : colors.text,
+                },
+              ]}>
+              {period.label}
             </Text>
-          </Surface>
+          </TouchableOpacity>
         ))}
       </View>
-    );
-  };
+    </View>
+  );
 
-  const renderTopCustomers = () => {
-    if (!topCustomers.length) {
-      return (
-        <Surface style={styles.emptyCard} elevation={0}>
-          <Text style={styles.emptyText}>No customer data available for this period</Text>
-        </Surface>
-      );
-    }
+  const renderOverviewCards = () => (
+    <View style={styles.overviewContainer}>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>
+        সারসংক্ষেপ
+      </Text>
+      <View style={styles.cardsRow}>
+        <View style={[styles.overviewCard, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.cardValue, { color: colors.success }]}>
+            +{stats?.totalCredit || 0}৳
+          </Text>
+          <Text style={[styles.cardLabel, { color: colors.textSecondary }]}>
+            মোট পাওনা
+          </Text>
+        </View>
+        
+        <View style={[styles.overviewCard, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.cardValue, { color: colors.error }]}>
+            {stats?.totalDebit || 0}৳
+          </Text>
+          <Text style={[styles.cardLabel, { color: colors.textSecondary }]}>
+            মোট দেনা
+          </Text>
+        </View>
+        
+        <View style={[styles.overviewCard, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.cardValue, { color: colors.primary }]}>
+            {stats?.netBalance || 0}৳
+          </Text>
+          <Text style={[styles.cardLabel, { color: colors.textSecondary }]}>
+            নিট ব্যালেন্স
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
 
-    return (
-      <View style={styles.topCustomersContainer}>
-        <Text style={styles.sectionTitle}>Top Customers</Text>
-        {topCustomers.map((customer, index) => (
-          <Surface key={index} style={styles.customerCard} elevation={0}>
-            <View style={styles.customerRank}>
-              <Text style={styles.customerRankText}>#{index + 1}</Text>
+  const renderRecentTransactions = () => (
+    <View style={styles.transactionsContainer}>
+      <View style={styles.sectionHeader}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          সাম্প্রতিক লেনদেন
+        </Text>
+        <TouchableOpacity onPress={handleAddTransaction} activeOpacity={0.8}>
+          <Text style={[styles.viewAllText, { color: colors.primary }]}>
+            নতুন লেনদেন
+          </Text>
+        </TouchableOpacity>
+      </View>
+      
+            <View style={styles.transactionsList}>
+        {((selectedPeriod === 'daily' ? dailyReport : monthlyReport) || []).length > 0 ? (
+          (selectedPeriod === 'daily' ? dailyReport : monthlyReport)?.slice(0, 5)?.map((transaction: any, index: number) => (
+            <View key={index} style={[styles.transactionItem, { backgroundColor: colors.surface }]}>
+              <View style={styles.transactionInfo}>
+                <Text style={[styles.transactionName, { color: colors.text }]} numberOfLines={1}>
+                  {transaction.customer_name || 'অজানা গ্রাহক'}
+                </Text>
+                <Text style={[styles.transactionDate, { color: colors.textSecondary }]}>
+                  {transaction.date ? format(new Date(transaction.date), 'dd MMM yyyy', { locale: bn }) : 'তারিখ নেই'}
+                </Text>
+              </View>
+              
+              <View style={styles.transactionAmount}>
+                <Text
+                  style={[
+                    styles.amountText,
+                    {
+                      color: (transaction.amount || 0) >= 0 ? colors.success : colors.error,
+                    },
+                  ]}>
+                  {(transaction.amount || 0) >= 0 ? '+' : ''}{transaction.amount || 0}৳
+                </Text>
+                <Text style={[styles.transactionType, { color: colors.textSecondary }]}>
+                  {(transaction.amount || 0) >= 0 ? 'পাওনা' : 'দেনা'}
+                </Text>
+              </View>
             </View>
+          ))
+        ) : (
+          <View style={[styles.emptyState, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              কোন লেনদেন পাওয়া যায়নি
+            </Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+
+  const renderTopCustomers = () => (
+    <View style={styles.topCustomersContainer}>
+      <View style={styles.sectionHeader}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          শীর্ষ গ্রাহক
+        </Text>
+        <TouchableOpacity onPress={handleViewCustomers} activeOpacity={0.8}>
+          <Text style={[styles.viewAllText, { color: colors.primary }]}>
+            সব দেখুন
+          </Text>
+        </TouchableOpacity>
+      </View>
+      
+      <View style={styles.customersList}>
+        {topCustomers.slice(0, 5).map((customer, index) => (
+          <View key={customer.id} style={[styles.customerItem, { backgroundColor: colors.surface }]}>
             <View style={styles.customerInfo}>
-              <Text style={styles.customerName}>{customer.name}</Text>
-              <Text style={styles.customerPhone}>{customer.phone || 'No phone'}</Text>
-              <Text style={styles.customerTransactions}>
-                {customer.transaction_count} transactions
+              <Text style={[styles.customerName, { color: colors.text }]} numberOfLines={1}>
+                {customer.name}
+              </Text>
+              <Text style={[styles.customerPhone, { color: colors.textSecondary }]}>
+                {customer.phone || 'ফোন নম্বর নেই'}
               </Text>
             </View>
-            <View style={styles.customerAmounts}>
-              <Text style={styles.customerCredit}>
-                +{profile?.currency || '৳'}
-                {customer.total_credit.toFixed(0)}
-              </Text>
-              <Text style={styles.customerDebit}>
-                -{profile?.currency || '৳'}
-                {customer.total_debit.toFixed(0)}
-              </Text>
+            
+            <View style={styles.customerBalance}>
               <Text
                 style={[
-                  styles.customerNet,
-                  { color: customer.net_amount >= 0 ? '#4CAF50' : '#F44336' },
+                  styles.balanceText,
+                  {
+                    color: customer.total_balance >= 0 ? colors.success : colors.error,
+                  },
                 ]}>
-                Net: {customer.net_amount >= 0 ? '+' : ''}
-                {profile?.currency || '৳'}
-                {customer.net_amount.toFixed(0)}
+                {customer.total_balance >= 0 ? '+' : ''}{customer.total_balance}৳
+              </Text>
+              <Text style={[styles.balanceLabel, { color: colors.textSecondary }]}>
+                ব্যালেন্স
               </Text>
             </View>
-          </Surface>
+          </View>
         ))}
       </View>
+    </View>
+  );
+
+  if (loading) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <Text style={[styles.loadingText, { color: colors.text }]}>
+          রিপোর্ট লোড হচ্ছে...
+        </Text>
+      </View>
     );
-  };
-
-  const renderContent = () => {
-    if (loading) {
-      return (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#fe4c24" />
-          <Text style={styles.loadingText}>Loading reports...</Text>
-        </View>
-      );
-    }
-
-    switch (reportType) {
-      case 'daily':
-        return (
-          <>
-            {renderDailySummary()}
-            {renderDailyTransactions()}
-          </>
-        );
-      case 'monthly':
-        return (
-          <>
-            {renderMonthlySummary()}
-            {renderMonthlyChart()}
-          </>
-        );
-      case 'yearly':
-        return renderYearlyChart();
-      case 'top-customers':
-        return renderTopCustomers();
-      default:
-        return null;
-    }
-  };
+  }
 
   return (
     <PageTransition>
-      <StatusBar style="light" />
-
-      {renderHeader()}
-
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        {renderReportTypeSelector()}
-        {renderDateNavigation()}
-        {renderContent()}
-
-        <View style={styles.bottomSpacing} />
-      </ScrollView>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {renderHeader()}
+        {renderPeriodSelector()}
+        
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
+          contentContainerStyle={styles.scrollContent}>
+          
+          {renderOverviewCards()}
+          {renderRecentTransactions()}
+          {renderTopCustomers()}
+          
+        </ScrollView>
+        
+        <FAB
+          icon="plus"
+          style={[styles.fab, { backgroundColor: colors.primary }]}
+          onPress={handleAddTransaction}
+          color={colors.textInverse}
+        />
+      </View>
     </PageTransition>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
-  headerContainer: {
-    backgroundColor: '#fe4c24',
-    paddingTop: 8,
+  header: {
+    paddingTop: 50,
+    paddingBottom: 20,
     paddingHorizontal: 20,
-    paddingBottom: 8,
-    flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    height: 65,
-    position: 'relative',
   },
   headerTitle: {
-    fontSize: 19,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: 'white',
-    textAlign: 'center',
-    flex: 1,
+    marginBottom: 5,
   },
-  headerRightAction: {
-    position: 'absolute',
-    right: 8,
-    top: '50%',
-    marginTop: -20,
+  headerSubtitle: {
+    fontSize: 16,
+    opacity: 0.9,
   },
-  chipContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+  periodContainer: {
+    padding: 20,
+    paddingBottom: 15,
   },
-  chip: {
-    marginRight: 8,
-    backgroundColor: '#f0f0f0',
-  },
-  chipSelected: {
-    backgroundColor: '#fe4c24',
-  },
-  chipText: {
-    color: '#666',
-  },
-  chipTextSelected: {
-    color: 'white',
+  periodLabel: {
+    fontSize: 16,
     fontWeight: '600',
+    marginBottom: 10,
   },
-  dateNavigation: {
+  periodButtons: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginHorizontal: 16,
-    marginBottom: 16,
+    gap: 10,
+  },
+  periodButton: {
+    paddingHorizontal: 16,
     paddingVertical: 8,
-    paddingHorizontal: 16,
-    backgroundColor: 'white',
-    borderRadius: 12,
+    borderRadius: 20,
+    elevation: 2,
   },
-  dateText: {
-    fontSize: 16,
+  periodButtonText: {
+    fontSize: 14,
     fontWeight: '600',
-    color: '#333',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 60,
+  scrollContent: {
+    paddingBottom: 100,
   },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
-  },
-  summaryContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    marginBottom: 16,
-  },
-  summaryCard: {
-    flex: 1,
-    alignItems: 'center',
-    padding: 16,
-    marginHorizontal: 4,
-    borderRadius: 12,
-    backgroundColor: 'white',
-  },
-  summaryIcon: {
-    margin: 0,
-    marginBottom: 8,
-  },
-  summaryValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-  },
-  summaryLabel: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
+  overviewContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 25,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
-    marginHorizontal: 16,
+    marginBottom: 15,
+  },
+  cardsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  overviewCard: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    elevation: 2,
+  },
+  cardValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  cardLabel: {
+    fontSize: 12,
+    textAlign: 'center',
+    opacity: 0.8,
   },
   transactionsContainer: {
-    marginBottom: 16,
+    paddingHorizontal: 20,
+    marginBottom: 25,
   },
-  transactionCard: {
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  viewAllText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  transactionsList: {
+    gap: 10,
+  },
+  transactionItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    marginHorizontal: 16,
-    marginBottom: 8,
-    backgroundColor: 'white',
     borderRadius: 12,
+    elevation: 2,
   },
   transactionInfo: {
     flex: 1,
   },
-  transactionCustomer: {
+  transactionName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 4,
   },
-  transactionNote: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 2,
-  },
-  transactionTime: {
+  transactionDate: {
     fontSize: 12,
-    color: '#999',
+    opacity: 0.7,
   },
   transactionAmount: {
     alignItems: 'flex-end',
   },
-  transactionAmountText: {
-    fontSize: 16,
+  amountText: {
+    fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 2,
   },
   transactionType: {
     fontSize: 12,
-    color: '#666',
-  },
-  chartContainer: {
-    marginBottom: 16,
-  },
-  chartItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    marginHorizontal: 16,
-    marginBottom: 8,
-    backgroundColor: 'white',
-    borderRadius: 12,
-  },
-  chartDate: {
-    alignItems: 'center',
-    width: 60,
-  },
-  chartDateText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  chartDayText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  chartData: {
-    flex: 1,
-    marginLeft: 16,
-  },
-  chartTransactions: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 4,
-  },
-  chartAmounts: {
-    flexDirection: 'row',
-  },
-  chartCredit: {
-    fontSize: 14,
-    color: '#4CAF50',
-    marginRight: 12,
-  },
-  chartDebit: {
-    fontSize: 14,
-    color: '#F44336',
-  },
-  chartNet: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'right',
-    minWidth: 80,
+    opacity: 0.7,
   },
   topCustomersContainer: {
-    marginBottom: 16,
+    paddingHorizontal: 20,
+    marginBottom: 25,
   },
-  customerCard: {
+  customersList: {
+    gap: 10,
+  },
+  customerItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    marginHorizontal: 16,
-    marginBottom: 8,
-    backgroundColor: 'white',
     borderRadius: 12,
-  },
-  customerRank: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#fe4c24',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  customerRankText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: 'white',
+    elevation: 2,
   },
   customerInfo: {
     flex: 1,
@@ -708,49 +444,49 @@ const styles = StyleSheet.create({
   customerName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   customerPhone: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 2,
-  },
-  customerTransactions: {
     fontSize: 12,
-    color: '#999',
+    opacity: 0.7,
   },
-  customerAmounts: {
+  customerBalance: {
     alignItems: 'flex-end',
   },
-  customerCredit: {
-    fontSize: 12,
-    color: '#4CAF50',
-  },
-  customerDebit: {
-    fontSize: 12,
-    color: '#F44336',
-  },
-  customerNet: {
-    fontSize: 14,
+  balanceText: {
+    fontSize: 18,
     fontWeight: 'bold',
-    marginTop: 2,
+    marginBottom: 2,
   },
-  emptyCard: {
-    padding: 32,
-    margin: 16,
-    backgroundColor: 'white',
+  balanceLabel: {
+    fontSize: 12,
+    opacity: 0.7,
+  },
+  fab: {
+    position: 'absolute',
+    margin: 20,
+    right: 0,
+    bottom: 80,
+    borderRadius: 30,
+    elevation: 4,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  emptyState: {
+    padding: 20,
     borderRadius: 12,
     alignItems: 'center',
+    elevation: 2,
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-  },
-  bottomSpacing: {
-    height: 100,
+    opacity: 0.7,
   },
 });
-
-export default Cashbox;

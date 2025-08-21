@@ -2,18 +2,22 @@
 
 /**
  * GitHub Actions Setup Script for TallyKhata
- * 
+ *
  * This script helps verify and set up GitHub Actions workflows.
  */
 
-const fs = require('fs');
-const path = require('path');
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import fs from 'fs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 console.log('🚀 TallyKhata GitHub Actions Setup (Android Only)');
 console.log('================================================');
 
 // Check if workflows directory exists
-const workflowsDir = path.join(__dirname, '..', '.github', 'workflows');
+const workflowsDir = join(__dirname, '..', '.github', 'workflows');
 if (!fs.existsSync(workflowsDir)) {
   console.log('❌ .github/workflows directory not found');
   console.log('💡 Make sure you have pushed the workflows to GitHub');
@@ -23,22 +27,22 @@ if (!fs.existsSync(workflowsDir)) {
 // List workflow files
 const workflowFiles = fs.readdirSync(workflowsDir);
 console.log('✅ Found workflow files:');
-workflowFiles.forEach(file => {
+workflowFiles.forEach((file) => {
   console.log(`   📁 ${file}`);
 });
 
 // Check package.json scripts
-const packageJsonPath = path.join(__dirname, '..', 'package.json');
+const packageJsonPath = join(__dirname, '..', 'package.json');
 if (fs.existsSync(packageJsonPath)) {
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
   console.log('\n📦 Package.json scripts:');
-  Object.keys(packageJson.scripts).forEach(script => {
+  Object.keys(packageJson.scripts).forEach((script) => {
     console.log(`   🔧 ${script}: ${packageJson.scripts[script]}`);
   });
 }
 
 // Check EAS configuration
-const easJsonPath = path.join(__dirname, '..', 'eas.json');
+const easJsonPath = join(__dirname, '..', 'eas.json');
 if (fs.existsSync(easJsonPath)) {
   console.log('\n🏗️  EAS configuration found');
 } else {

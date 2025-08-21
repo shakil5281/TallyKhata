@@ -143,7 +143,7 @@ See [GITHUB_ACTIONS_SETUP.md](./GITHUB_ACTIONS_SETUP.md) for detailed setup inst
 
 ## 📱 Supported Platforms
 
-- ✅ **Android (APK/AAB)** - Primary platform with automated builds
+- ✅ **Android (APK/App Bundle)** - Primary platform with automated builds
 - ✅ **Web (Progressive Web App)** - Cross-platform web version
 - ✅ **Expo Go (Development)** - Development and testing
 - 📱 **iOS** - Available for development (manual builds)

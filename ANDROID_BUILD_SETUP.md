@@ -89,7 +89,7 @@ Your `eas.json` is already configured for Android builds:
       "android": { "buildType": "apk" }
     },
     "production": {
-      "android": { "buildType": "aab" }
+      "android": { "buildType": "app-bundle" }
     }
   }
 }

@@ -60,6 +60,13 @@ export const responsiveTokens = {
       shadowRadius: 8,
       elevation: 6,
     },
+    dark: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+      elevation: 4,
+    },
   },
 
   // Typography scale
@@ -80,69 +87,79 @@ export const responsiveTokens = {
 // Light theme colors
 export const lightColors = {
   // Brand colors
-  primary: '#fe4c24',
-  primaryLight: '#ff6b4a',
-  primaryDark: '#d63d1a',
+  primary: '#FF6B35',
+  primaryLight: '#FF8A5B',
+  primaryDark: '#E55A2B',
 
   // Secondary colors
   secondary: '#F59E0B',
-  secondaryLight: '#fbbf24',
-  secondaryDark: '#d97706',
+  secondaryLight: '#FCD34D',
+  secondaryDark: '#D97706',
 
   // Accent colors
   accent: '#10B981',
-  accentLight: '#34d399',
+  accentLight: '#34D399',
   accentDark: '#059669',
 
   // Background colors
-  background: '#fff9f8',
-  backgroundSecondary: '#f8f9fa',
-  backgroundTertiary: '#f1f3f4',
+  background: '#FAFAFA',
+  backgroundSecondary: '#F5F5F5',
+  backgroundTertiary: '#EEEEEE',
 
   // Surface colors
-  surface: '#ffffff',
-  surfaceSecondary: '#f8f9fa',
-  surfaceTertiary: '#f1f3f4',
+  surface: '#FFFFFF',
+  surfaceSecondary: '#F8F9FA',
+  surfaceTertiary: '#F1F3F4',
 
   // Text colors
-  text: '#1f2937',
-  textSecondary: '#6b7280',
-  textTertiary: '#9ca3af',
-  textInverse: '#ffffff',
+  text: '#212121',
+  textSecondary: '#757575',
+  textTertiary: '#9E9E9E',
+  textInverse: '#FFFFFF',
 
   // Border colors
-  border: '#e5e7eb',
-  borderSecondary: '#f3f4f6',
+  border: '#E0E0E0',
+  borderSecondary: '#F5F5F5',
 
   // Status colors
-  success: '#10B981',
-  warning: '#F59E0B',
-  error: '#ef4444',
-  info: '#3b82f6',
+  success: '#4CAF50',
+  warning: '#FF9800',
+  error: '#F44336',
+  info: '#2196F3',
 
   // Card colors
-  card: '#ffffff',
-  cardSecondary: '#f8f9fa',
+  card: '#FFFFFF',
+  cardSecondary: '#F8F9FA',
 
   // Input colors
-  input: '#ffffff',
-  inputBorder: '#d1d5db',
-  inputFocus: '#fe4c24',
+  input: '#FFFFFF',
+  inputBorder: '#E0E0E0',
+  inputFocus: '#FF6B35',
 
   // Button colors
-  buttonPrimary: '#fe4c24',
-  buttonSecondary: '#6b7280',
-  buttonSuccess: '#10B981',
-  buttonWarning: '#F59E0B',
-  buttonError: '#ef4444',
+  buttonPrimary: '#FF6B35',
+  buttonSecondary: '#757575',
+  buttonSuccess: '#4CAF50',
+  buttonWarning: '#FF9800',
+  buttonError: '#F44336',
+
+  // Bottom navigation colors
+  bottomNavBackground: '#FFFFFF',
+  bottomNavBorder: '#E0E0E0',
+  bottomNavActive: '#FF6B35',
+  bottomNavInactive: '#9E9E9E',
+
+  // Status bar colors
+  statusBarBackground: '#FF6B35',
+  statusBarStyle: 'light-content',
 };
 
 // Dark theme colors
 export const darkColors = {
-  // Brand colors (keep same for consistency)
-  primary: '#fe4c24',
-  primaryLight: '#ff6b4a',
-  primaryDark: '#d63d1a',
+  // Brand colors - better for dark mode
+  primary: '#1E1E1E',
+  primaryLight: '#2a2a2a',
+  primaryDark: '#141414',
 
   // Secondary colors
   secondary: '#F59E0B',
@@ -160,7 +177,7 @@ export const darkColors = {
   backgroundTertiary: '#2a2a2a',
 
   // Surface colors
-  surface: '#1e1e1e',
+  surface: '#1E1E1E',
   surfaceSecondary: '#2a2a2a',
   surfaceTertiary: '#3a3a3a',
 
@@ -168,7 +185,7 @@ export const darkColors = {
   text: '#f9fafb',
   textSecondary: '#d1d5db',
   textTertiary: '#9ca3af',
-  textInverse: '#1f2937',
+  textInverse: '#ffffff',
 
   // Border colors
   border: '#374151',
@@ -181,20 +198,30 @@ export const darkColors = {
   info: '#3b82f6',
 
   // Card colors
-  card: '#1e1e1e',
+  card: '#1E1E1E',
   cardSecondary: '#2a2a2a',
 
   // Input colors
   input: '#2a2a2a',
   inputBorder: '#4b5563',
-  inputFocus: '#fe4c24',
+  inputFocus: '#ff6b4a',
 
   // Button colors
-  buttonPrimary: '#fe4c24',
+  buttonPrimary: '#ff6b4a',
   buttonSecondary: '#6b7280',
   buttonSuccess: '#10B981',
   buttonWarning: '#F59E0B',
   buttonError: '#ef4444',
+
+  // Bottom navigation colors
+  bottomNavBackground: '#1E1E1E',
+  bottomNavBorder: '#374151',
+  bottomNavActive: '#F59E0B',
+  bottomNavInactive: '#6b7280',
+
+  // Status bar colors
+  statusBarBackground: '#1e1e1e',
+  statusBarStyle: 'light-content',
 };
 
 // Create theme objects
