@@ -1,18 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Stack } from 'expo-router';
 import { PaperProvider } from 'react-native-paper';
-import { useColorScheme } from 'react-native';
 import '../global.css';
 
-import { lightTheme, darkTheme } from '~/theme/theme';
+import { ThemeProvider, useTheme } from '~/context/ThemeContext';
 import SplashScreen from '../components/SplashScreen';
 import { ToastProvider } from '~/context/ToastContext';
 import { initDB, initializeDefaultProfile } from '~/lib/db';
 
-export default function Layout() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+function AppContent() {
+  const { theme } = useTheme();
   const [isInitializing, setIsInitializing] = useState(true);
+
+  // Memoize the callback to prevent infinite re-renders
+  const handleAnimationComplete = useCallback(() => {
+    setIsInitializing(false);
+  }, []);
 
   useEffect(() => {
     // Initialize app only once on startup
@@ -24,12 +27,8 @@ export default function Layout() {
         await initDB();
         await initializeDefaultProfile();
 
-        // Minimal loading time for faster startup
-        await new Promise((resolve) => setTimeout(resolve, 1200));
-
-        if (isMounted) {
-          setIsInitializing(false);
-        }
+        // Don't set isInitializing to false here - let the SplashScreen handle it
+        // The SplashScreen will call onAnimationComplete when ready
       } catch (error) {
         console.error('App initialization error:', error);
         if (isMounted) {
@@ -47,10 +46,10 @@ export default function Layout() {
 
   if (isInitializing) {
     return (
-      <PaperProvider theme={isDark ? darkTheme : lightTheme}>
+      <PaperProvider theme={theme}>
         <ToastProvider>
           <SplashScreen
-            onAnimationComplete={() => setIsInitializing(false)}
+            onAnimationComplete={handleAnimationComplete}
             showProgress={true}
             duration={1200}
           />
@@ -60,7 +59,7 @@ export default function Layout() {
   }
 
   return (
-    <PaperProvider theme={isDark ? darkTheme : lightTheme}>
+    <PaperProvider theme={theme}>
       <ToastProvider>
         <Stack
           screenOptions={{
@@ -70,9 +69,25 @@ export default function Layout() {
             animationTypeForReplace: 'push',
             gestureEnabled: true,
             gestureDirection: 'horizontal',
-          }}
-        />
+          }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="add-customer/index" />
+          <Stack.Screen name="add-transaction/index" />
+          <Stack.Screen name="customers-list/index" />
+          <Stack.Screen name="profile-edit/index" />
+          <Stack.Screen name="transaction/[id]" />
+          <Stack.Screen name="customer-edit/[id]" />
+          <Stack.Screen name="app-info" />
+        </Stack>
       </ToastProvider>
     </PaperProvider>
+  );
+}
+
+export default function Layout() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 }

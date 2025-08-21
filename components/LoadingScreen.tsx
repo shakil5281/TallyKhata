@@ -82,7 +82,7 @@ export default function LoadingScreen({
     return () => {
       rotateAnimation.stop();
     };
-  }, []);
+  }, [fadeAnim, scaleAnim, slideAnim, rotateAnim, dotAnim1, dotAnim2, dotAnim3]);
 
   const spin = rotateAnim.interpolate({
     inputRange: [0, 1],

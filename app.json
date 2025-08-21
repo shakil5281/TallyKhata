@@ -35,14 +35,13 @@
             "useSQLCipher": false
           },
           "ios": {
-            "customBuildFlags": [
-              "-DSQLITE_ENABLE_DBSTAT_VTAB=1 -DSQLITE_ENABLE_SNAPSHOT=1"
-            ]
+            "customBuildFlags": ["-DSQLITE_ENABLE_DBSTAT_VTAB=1 -DSQLITE_ENABLE_SNAPSHOT=1"]
           }
         }
       ],
       "expo-secure-store",
-      "expo-router"
+      "expo-router",
+      "expo-image-picker"
     ],
     "orientation": "portrait",
     "icon": "./assets/mainLogo.png",
@@ -60,9 +59,7 @@
         "backgroundColor": "#fe4c24"
       }
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "statusBarStyle": "light",
@@ -96,7 +93,10 @@
       "label": "TallyKhata",
       "permissions": [
         "android.permission.INTERNET",
-        "android.permission.ACCESS_NETWORK_STATE"
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
       ]
     },
     "extra": {

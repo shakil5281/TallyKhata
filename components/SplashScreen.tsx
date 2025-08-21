@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Animated, Dimensions, StatusBar } from 'react-native';
 import { Avatar, Surface, ProgressBar } from 'react-native-paper';
 
@@ -26,13 +26,22 @@ export default function SplashScreen({
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const shimmerAnim = useRef(new Animated.Value(-1)).current;
 
-  const loadingSteps = [
-    { text: 'Initializing TallyKhata...', progress: 0.2 },
-    { text: 'Setting up secure database...', progress: 0.4 },
-    { text: 'Loading your profile...', progress: 0.6 },
-    { text: 'Preparing dashboard...', progress: 0.8 },
-    { text: 'Ready to go!', progress: 1.0 },
-  ];
+  // Memoize the loading steps to prevent recreation
+  const loadingSteps = useMemo(
+    () => [
+      { text: 'Initializing TallyKhata...', progress: 0.2 },
+      { text: 'Setting up secure database...', progress: 0.4 },
+      { text: 'Loading your profile...', progress: 0.6 },
+      { text: 'Preparing dashboard...', progress: 0.8 },
+      { text: 'Ready to go!', progress: 1.0 },
+    ],
+    []
+  );
+
+  // Memoize the hideToast callback
+  const handleAnimationComplete = useCallback(() => {
+    onAnimationComplete?.();
+  }, [onAnimationComplete]);
 
   useEffect(() => {
     // Start entrance animation
@@ -107,7 +116,7 @@ export default function SplashScreen({
         clearInterval(progressInterval);
         // Complete animation
         setTimeout(() => {
-          onAnimationComplete?.();
+          handleAnimationComplete();
         }, 500);
       }
     }, stepDuration);
@@ -118,7 +127,17 @@ export default function SplashScreen({
       pulseAnimation.stop();
       shimmerAnimation.stop();
     };
-  }, [duration]);
+  }, [
+    duration,
+    fadeAnim,
+    scaleAnim,
+    slideUpAnim,
+    logoRotateAnim,
+    pulseAnim,
+    shimmerAnim,
+    loadingSteps,
+    handleAnimationComplete,
+  ]);
 
   const logoRotation = logoRotateAnim.interpolate({
     inputRange: [0, 1],

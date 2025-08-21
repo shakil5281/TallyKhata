@@ -29,7 +29,7 @@ export function SkeletonItem({
     shimmerAnimation.start();
 
     return () => shimmerAnimation.stop();
-  }, []);
+  }, [shimmerAnim]);
 
   const translateX = shimmerAnim.interpolate({
     inputRange: [0, 1],

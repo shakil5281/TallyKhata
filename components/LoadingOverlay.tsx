@@ -49,7 +49,7 @@ export default function LoadingOverlay({
         }),
       ]).start();
     }
-  }, [visible]);
+  }, [visible, fadeAnim, scaleAnim]);
 
   if (!visible) return null;
 

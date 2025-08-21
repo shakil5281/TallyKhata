@@ -1,13 +1,12 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, FlatList, Text, Alert, StyleSheet } from 'react-native';
-import { Button, IconButton, Surface, FAB, Chip, Avatar } from 'react-native-paper';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { getCustomers, getCustomerTransactions, getUserProfile } from '~/lib/db';
-
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, Alert } from 'react-native';
+import { Avatar, IconButton, Surface, Chip, FAB, Button } from 'react-native-paper';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { getCustomerTransactions, getCustomerById, getUserProfile } from '~/lib/db';
 import { StatusBar } from 'expo-status-bar';
-import PageTransition from '../../components/PageTransition';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import PageTransition from '../../components/PageTransition';
 
 export default function CustomerTransactionScreen() {
   interface Transaction {
@@ -19,68 +18,47 @@ export default function CustomerTransactionScreen() {
     date: string;
     customer_name: string;
   }
+
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [customer, setCustomer] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [limit] = useState(20);
-  const [hasMore, setHasMore] = useState(true);
-  const router = useRouter();
   const { id } = useLocalSearchParams();
+  const router = useRouter();
 
-  const loadInitialData = useCallback(async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      if (id) {
-        const [customersResult, profileResult, transactionsResult] = await Promise.all([
-          getCustomers(),
-          getUserProfile(),
-          getCustomerTransactions(Number(id), limit, 0),
-        ]);
+      const [customerResult, profileResult] = await Promise.all([
+        getCustomerById(Number(id)),
+        getUserProfile(),
+      ]);
 
-        const foundCustomer = customersResult.find((c: any) => c.id === Number(id));
-        setCustomer(foundCustomer);
-        setProfile(profileResult);
+      setCustomer(customerResult);
+      setProfile(profileResult);
+
+      if (customerResult) {
+        const transactionsResult = await getCustomerTransactions(Number(id), 100, 0);
         setTransactions(transactionsResult as Transaction[]);
-        setHasMore(transactionsResult.length === limit);
       }
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
-  }, [id, limit]);
+  }, [id]);
 
-  const loadMoreTransactions = async () => {
-    if (!hasMore || loading) return;
-
-    try {
-      const newOffset = transactions.length;
-      const result = await getCustomerTransactions(Number(id), limit, newOffset);
-      setTransactions((prev) => [...prev, ...(result as Transaction[])]);
-      setHasMore(result.length === limit);
-    } catch (error) {
-      console.error('Error loading more transactions:', error);
-    }
-  };
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    try {
-      const result = await getCustomerTransactions(Number(id), limit, 0);
-      setTransactions(result as Transaction[]);
-      setHasMore(result.length === limit);
-    } catch (error) {
-      console.error('Error refreshing:', error);
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
+  // Load data on initial mount
   useEffect(() => {
-    loadInitialData();
-  }, [id, loadInitialData]);
+    loadData();
+  }, [loadData]);
+
+  // Refresh data every time the screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
 
   const calculateBalance = () => {
     return transactions.reduce(
@@ -168,14 +146,22 @@ export default function CustomerTransactionScreen() {
     return (
       <Surface style={styles.customerHeader}>
         <View style={styles.customerInfo}>
-          <Avatar.Text
-            size={60}
-            label={customer.name.charAt(0).toUpperCase()}
-            style={[
-              styles.customerAvatar,
-              { backgroundColor: customer.type === 'Customer' ? '#fe4c24' : '#4CAF50' },
-            ]}
-          />
+          {customer.photo ? (
+            <Avatar.Image
+              size={60}
+              source={{ uri: customer.photo }}
+              style={styles.customerAvatar}
+            />
+          ) : (
+            <Avatar.Text
+              size={60}
+              label={customer.name.charAt(0).toUpperCase()}
+              style={[
+                styles.customerAvatar,
+                { backgroundColor: customer.type === 'Customer' ? '#fe4c24' : '#4CAF50' },
+              ]}
+            />
+          )}
           <View style={styles.customerDetails}>
             <Text style={styles.customerName}>{customer.name}</Text>
             <Text style={styles.customerPhone}>{customer.phone || 'No phone'}</Text>
@@ -204,6 +190,16 @@ export default function CustomerTransactionScreen() {
           <Text style={[styles.balanceStatus, { color: balance >= 0 ? '#4CAF50' : '#F44336' }]}>
             {balance >= 0 ? 'Credit' : 'Debit'}
           </Text>
+        </View>
+
+        <View style={styles.customerActions}>
+          <IconButton
+            icon="pencil"
+            size={20}
+            iconColor="#666"
+            style={styles.editButton}
+            onPress={() => router.push(`/customer-edit/${customer.id}`)}
+          />
         </View>
       </Surface>
     );
@@ -286,7 +282,10 @@ export default function CustomerTransactionScreen() {
             icon="arrow-left"
             size={24}
             iconColor="white"
-            onPress={() => router.back()}
+            onPress={() => {
+              router.push('/');
+              router.replace('/');
+            }}
             style={styles.headerLeftAction}
           />
           <Text style={styles.headerTitle}>Transactions</Text>
@@ -308,7 +307,10 @@ export default function CustomerTransactionScreen() {
           icon="arrow-left"
           size={24}
           iconColor="white"
-          onPress={() => router.back()}
+          onPress={() => {
+            router.push('/');
+            router.replace('/');
+          }}
           style={styles.headerLeftAction}
         />
         <Text style={styles.headerTitle}>{customer?.name || 'Transactions'}</Text>
@@ -355,10 +357,6 @@ export default function CustomerTransactionScreen() {
             showsVerticalScrollIndicator={false}
             style={styles.transactionsList}
             contentContainerStyle={styles.transactionsListContent}
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            onEndReached={loadMoreTransactions}
-            onEndReachedThreshold={0.5}
           />
         ) : (
           renderEmptyState()
@@ -481,6 +479,15 @@ const styles = StyleSheet.create({
   balanceStatus: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  customerActions: {
+    alignItems: 'flex-end',
+    marginTop: 16,
+  },
+  editButton: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 10,
+    padding: 5,
   },
   statsContainer: {
     flexDirection: 'row',

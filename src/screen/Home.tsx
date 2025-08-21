@@ -1,12 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Button, Avatar, IconButton, Surface, FAB } from 'react-native-paper';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { getCustomers, getUserProfile, getDashboardStats } from '~/lib/db';
-import { exportAllData } from '~/lib/exportData';
 import { StatusBar } from 'expo-status-bar';
 import { CustomerCardSkeleton } from '../../components/SkeletonLoader';
-
+import { useTheme } from '~/context/ThemeContext';
 import PageTransition from '../../components/PageTransition';
 
 export default function HomeScreen() {
@@ -15,314 +14,265 @@ export default function HomeScreen() {
     name: string;
     phone: string;
     type: string;
+    photo?: string;
     total_balance: number;
   }
+
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [profile, setProfile] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
   const router = useRouter();
   const [loading, setLoading] = useState<boolean>(true);
+  const { theme, isDark } = useTheme();
+  const { colors, borderRadius } = theme.custom;
 
-  const handleExportData = async () => {
+  const loadData = useCallback(async () => {
     try {
-      Alert.alert('Export Data', 'Choose export format:', [
-        {
-          text: 'CSV',
-          onPress: async () => {
-            try {
-              await exportAllData();
-              Alert.alert('Success', 'Data exported successfully!');
-            } catch {
-              Alert.alert('Error', 'Failed to export data');
-            }
-          },
-        },
-        {
-          text: 'JSON',
-          onPress: async () => {
-            try {
-              await exportAllData();
-              Alert.alert('Success', 'Data exported successfully!');
-            } catch {
-              Alert.alert('Error', 'Failed to export data');
-            }
-          },
-        },
-        { text: 'Cancel', style: 'cancel' },
+      setLoading(true);
+      // Load all data in parallel
+      const [customersResult, profileResult, statsResult] = await Promise.all([
+        getCustomers(),
+        getUserProfile(),
+        getDashboardStats(),
       ]);
-    } catch {
-      Alert.alert('Error', 'Failed to export data');
+
+      setCustomers(customersResult as Customer[]);
+      setProfile(profileResult);
+      setStats(statsResult);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        // Load all data in parallel
-        const [customersResult, profileResult, statsResult] = await Promise.all([
-          getCustomers(),
-          getUserProfile(),
-          getDashboardStats(),
-        ]);
-
-        setCustomers(customersResult as Customer[]);
-        setProfile(profileResult);
-        setStats(statsResult);
-      } catch {
-        console.error('Error loading data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
   }, []);
+
+  // Load data on initial mount
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Refresh data every time the screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
 
   const renderCustomer = ({ item }: { item: Customer }) => (
     <TouchableOpacity
       onPress={() => router.push(`/transaction/${item.id}`)}
       style={styles.customerCardContainer}>
-      <Surface style={styles.customerCard} elevation={0}>
+      <Surface
+        style={[
+          styles.customerCard,
+          {
+            backgroundColor: 'transparent',
+            borderRadius: borderRadius.md,
+            borderRightWidth: 3,
+            borderRightColor: colors.primary,
+          },
+        ]}
+        elevation={0}>
         <View style={styles.customerCardContent}>
           <View style={styles.customerInfo}>
-            <Avatar.Text
-              size={50}
-              label={item.name ? item.name.charAt(0).toUpperCase() : '?'}
-              style={[
-                styles.customerAvatar,
-                { backgroundColor: item.type === 'Customer' ? '#fe4c24' : '#4CAF50' },
-              ]}
-              labelStyle={styles.avatarLabel}
-            />
+            {item.photo ? (
+              <Avatar.Image size={50} source={{ uri: item.photo }} style={styles.customerAvatar} />
+            ) : (
+              <Avatar.Text
+                size={50}
+                label={item.name ? item.name.charAt(0).toUpperCase() : '?'}
+                style={[
+                  styles.customerAvatar,
+                  { backgroundColor: item.type === 'Customer' ? colors.primary : colors.accent },
+                ]}
+                labelStyle={styles.avatarLabel}
+              />
+            )}
             <View style={styles.customerDetails}>
-              <Text style={styles.customerName}>{item.name}</Text>
-              <Text style={styles.customerPhone}>
+              <Text style={[styles.customerName, { color: colors.text }]}>{item.name}</Text>
+              <Text style={[styles.customerPhone, { color: colors.textSecondary }]}>
                 {item.phone || 'No phone'} • {item.type}
               </Text>
+              <View style={styles.balanceRow}>
+                <Text style={[styles.balanceLabel, { color: colors.textSecondary }]}>
+                  Balance:{' '}
+                </Text>
+                <Text
+                  style={[
+                    styles.balanceAmount,
+                    { color: item.total_balance >= 0 ? colors.success : colors.error },
+                  ]}>
+                  {profile?.currency || '৳'}
+                  {Math.abs(item.total_balance || 0).toFixed(0)}
+                  <Text style={[styles.balanceType, { color: colors.textTertiary }]}>
+                    {item.total_balance >= 0 ? ' (Credit)' : ' (Debit)'}
+                  </Text>
+                </Text>
+              </View>
             </View>
           </View>
-
-          <View style={styles.customerBalance}>
-            <Text
-              style={[
-                styles.balanceAmount,
-                { color: item.total_balance >= 0 ? '#4CAF50' : '#F44336' },
-              ]}>
-              {profile?.currency || '৳'}
-              {Math.abs(item.total_balance || 0).toFixed(0)}
-            </Text>
-            <Text style={styles.balanceLabel}>{item.total_balance >= 0 ? 'Credit' : 'Debit'}</Text>
-            <IconButton
-              icon="chevron-right"
-              size={20}
-              iconColor="#666"
-              style={styles.chevronIcon}
-            />
-          </View>
+          <IconButton
+            icon="chevron-right"
+            size={24}
+            iconColor={colors.textSecondary}
+            style={styles.chevronIcon}
+          />
         </View>
       </Surface>
     </TouchableOpacity>
   );
 
-  const renderDashboardHeader = () => (
-    <View style={styles.dashboardHeader}>
-      <View style={styles.headerTop}>
-        <View style={styles.welcomeSection}>
-          <Text style={styles.welcomeText}>Welcome back,</Text>
-          <Text style={styles.userName}>{profile?.name || 'TallyKhata User'}</Text>
+  const renderWelcomeCard = () => (
+    <Surface
+      style={[
+        styles.welcomeCard,
+        {
+          backgroundColor: colors.primary,
+          borderRadius: borderRadius.lg,
+        },
+      ]}
+      elevation={0}>
+      <View style={styles.welcomeCardContent}>
+        <View style={styles.welcomeCardHeader}>
+          <View style={styles.welcomeTextSection}>
+            <Text style={[styles.welcomeGreeting, { color: colors.background }]}>
+              Good{' '}
+              {new Date().getHours() < 12
+                ? 'Morning'
+                : new Date().getHours() < 18
+                  ? 'Afternoon'
+                  : 'Evening'}
+              !
+            </Text>
+            <Text style={[styles.welcomeName, { color: colors.background }]}>
+              {profile?.name || 'Welcome to TallyKhata'}
+            </Text>
+            <Text style={[styles.welcomeSubtext, { color: colors.background }]}>
+              Manage your business with ease
+            </Text>
+          </View>
         </View>
-        <TouchableOpacity
-          onPress={() => router.push('/profile-edit' as any)}
-          style={styles.profileButton}>
-          <Avatar.Text
-            size={45}
-            label={profile?.name ? profile.name.charAt(0).toUpperCase() : 'U'}
-            style={styles.headerAvatar}
-          />
-        </TouchableOpacity>
+        <View style={[styles.welcomeDecorative, { borderColor: colors.border }]}>
+          <View style={[styles.decorativeDot, { backgroundColor: colors.primary }]} />
+          <View style={[styles.decorativeLine, { backgroundColor: colors.border }]} />
+          <View style={[styles.decorativeDot, { backgroundColor: colors.accent }]} />
+        </View>
       </View>
-
-      {/* Dashboard Stats */}
-      <View style={styles.statsContainer}>
-        <Surface style={styles.statCard} elevation={0}>
-          <IconButton icon="account-group" size={24} iconColor="#fe4c24" style={styles.statIcon} />
-          <Text style={styles.statNumber}>{stats?.totalCustomers || 0}</Text>
-          <Text style={styles.statLabel}>Customers</Text>
-        </Surface>
-
-        <Surface style={styles.statCard} elevation={0}>
-          <IconButton
-            icon="swap-horizontal"
-            size={24}
-            iconColor="#4CAF50"
-            style={styles.statIcon}
-          />
-          <Text style={styles.statNumber}>{stats?.totalTransactions || 0}</Text>
-          <Text style={styles.statLabel}>Transactions</Text>
-        </Surface>
-
-        <Surface style={styles.statCard} elevation={0}>
-          <IconButton icon="currency-usd" size={24} iconColor="#FF9800" style={styles.statIcon} />
-          <Text
-            style={[styles.statNumber, { color: stats?.netBalance >= 0 ? '#4CAF50' : '#F44336' }]}>
-            {profile?.currency || '৳'}
-            {Math.abs(stats?.netBalance || 0).toFixed(0)}
-          </Text>
-          <Text style={styles.statLabel}>Balance</Text>
-        </Surface>
-      </View>
-    </View>
+    </Surface>
   );
 
-  const renderQuickActions = () => (
-    <View style={styles.quickActionsContainer}>
-      <Text style={styles.sectionTitle}>Quick Actions</Text>
-      <View style={styles.quickActionsGrid}>
-        {/* First Column */}
-        <View style={styles.quickActionsColumn}>
-          <TouchableOpacity
-            style={styles.quickActionItem}
-            onPress={() => router.push('/add-customer')}>
-            <Avatar.Icon
-              size={40}
-              icon="account-plus"
-              style={[styles.quickActionAvatar, { backgroundColor: '#fe4c24' }]}
-            />
-            <Text style={styles.quickActionTitle}>Add Customer</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickActionItem}
-            onPress={() => {
-              router.push('/(tabs)' as any);
-            }}>
-            <Avatar.Icon
-              size={40}
-              icon="chart-bar"
-              style={[styles.quickActionAvatar, { backgroundColor: '#2196F3' }]}
-            />
-            <Text style={styles.quickActionTitle}>View Reports</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.quickActionItem} onPress={() => handleExportData()}>
-            <Avatar.Icon
-              size={40}
-              icon="download"
-              style={[styles.quickActionAvatar, { backgroundColor: '#9C27B0' }]}
-            />
-            <Text style={styles.quickActionTitle}>Export Data</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Second Column */}
-        <View style={styles.quickActionsColumn}>
-          <TouchableOpacity
-            style={styles.quickActionItem}
-            onPress={() => router.push('/add-transaction')}>
-            <Avatar.Icon
-              size={40}
-              icon="plus-circle"
-              style={[styles.quickActionAvatar, { backgroundColor: '#4CAF50' }]}
-            />
-            <Text style={styles.quickActionTitle}>Add Transaction</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickActionItem}
-            onPress={() => router.push('customers-list' as any)}>
-            <Avatar.Icon
-              size={40}
-              icon="account-group"
-              style={[styles.quickActionAvatar, { backgroundColor: '#FF9800' }]}
-            />
-            <Text style={styles.quickActionTitle}>All Customers</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.quickActionItem}
-            onPress={() => {
-              router.push('/(tabs)' as any);
-            }}>
-            <Avatar.Icon
-              size={40}
-              icon="cog"
-              style={[styles.quickActionAvatar, { backgroundColor: '#607D8B' }]}
-            />
-            <Text style={styles.quickActionTitle}>Settings</Text>
-          </TouchableOpacity>
+  const renderQuickStatusCard = () => (
+    <Surface
+      style={[
+        styles.quickStatusCard,
+        {
+          backgroundColor: 'white',
+          borderRadius: borderRadius.md,
+        },
+      ]}
+      elevation={0}>
+      <View style={styles.quickStatusContent}>
+        <Text style={[styles.quickStatusTitle, { color: colors.text }]}>Quick Status</Text>
+        <View style={styles.quickStatusGrid}>
+          <View style={styles.quickStatusItem}>
+            <View style={[styles.statusIndicator, { backgroundColor: colors.success }]} />
+            <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Credit</Text>
+            <Text style={[styles.statusValue, { color: colors.success }]}>
+              {profile?.currency || '৳'}
+              {stats?.totalCredit || 0}
+            </Text>
+          </View>
+          <View style={styles.quickStatusItem}>
+            <View style={[styles.statusIndicator, { backgroundColor: colors.error }]} />
+            <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Debit</Text>
+            <Text style={[styles.statusValue, { color: colors.error }]}>
+              {profile?.currency || '৳'}
+              {stats?.totalDebit || 0}
+            </Text>
+          </View>
         </View>
       </View>
-    </View>
+    </Surface>
   );
 
-  return (
-    <PageTransition>
-      <StatusBar style="light" />
-
-      {/* Custom Header */}
-      <View style={styles.headerContainer}>
-        <Text style={styles.headerTitle}>TallyKhata</Text>
-        <IconButton
-          icon="bell"
-          size={24}
-          iconColor="white"
-          onPress={() => {}}
-          style={styles.headerRightAction}
-        />
-      </View>
-
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        {loading ? (
+  if (loading) {
+    return (
+      <PageTransition>
+        <StatusBar style={isDark ? 'light' : 'dark'} />
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
           <View style={styles.loadingContainer}>
-            {[1, 2, 3].map((item) => (
+            {[1, 2, 3, 4].map((item) => (
               <CustomerCardSkeleton key={item} />
             ))}
           </View>
-        ) : (
-          <>
-            {renderDashboardHeader()}
-            {renderQuickActions()}
+        </View>
+      </PageTransition>
+    );
+  }
 
-            {/* Recent Customers */}
-            <View style={styles.customersSection}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Recent Customers</Text>
-                <TouchableOpacity onPress={() => router.push('/(tabs)/customers' as any)}>
-                  <Text style={styles.viewAllText}>View All</Text>
-                </TouchableOpacity>
-              </View>
+  return (
+    <PageTransition>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollViewContent}
+          showsVerticalScrollIndicator={false}>
+          {/* Welcome Card */}
+          {renderWelcomeCard()}
 
-              {customers.length > 0 ? (
-                customers
-                  .slice(0, 5)
-                  .map((item) => <View key={item.id.toString()}>{renderCustomer({ item })}</View>)
-              ) : (
-                <Surface style={styles.emptyState}>
-                  <IconButton icon="account-plus" size={48} iconColor="#ccc" />
-                  <Text style={styles.emptyStateText}>No customers yet</Text>
-                  <Text style={styles.emptyStateSubtext}>
-                    Add your first customer to get started
-                  </Text>
-                  <Button
-                    mode="contained"
-                    onPress={() => router.push('/add-customer')}
-                    style={styles.emptyStateButton}>
-                    Add Customer
-                  </Button>
-                </Surface>
-              )}
+          {/* Quick Status Card */}
+          {renderQuickStatusCard()}
+
+          {/* Recent Customers */}
+          <View style={styles.sectionContainer}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Recent Customers</Text>
+              <TouchableOpacity onPress={() => router.push('/customers-list')}>
+                <Text style={[styles.seeAllText, { color: colors.primary }]}>See All</Text>
+              </TouchableOpacity>
             </View>
-          </>
-        )}
-      </ScrollView>
 
-      {/* Floating Action Button */}
-      <FAB
-        icon="plus"
-        style={styles.fab}
-        onPress={() => router.push('/add-customer')}
-        color="white"
-      />
+            {customers.length > 0 ? (
+              customers
+                .slice(0, 5)
+                .map((item) => <View key={item.id}>{renderCustomer({ item })}</View>)
+            ) : (
+              <Surface
+                style={[
+                  styles.emptyState,
+                  {
+                    backgroundColor: 'transparent',
+                    borderRadius: borderRadius.md,
+                  },
+                ]}
+                elevation={0}>
+                <Text style={[styles.emptyStateTitle, { color: colors.text }]}>
+                  No Customers Yet
+                </Text>
+                <Text style={[styles.emptyStateSubtext, { color: colors.textSecondary }]}>
+                  Start by adding your first customer to track transactions
+                </Text>
+                <Button
+                  mode="contained"
+                  onPress={() => router.push('/add-customer')}
+                  style={[styles.emptyStateButton, { backgroundColor: colors.primary }]}>
+                  Add Customer
+                </Button>
+              </Surface>
+            )}
+          </View>
+        </ScrollView>
+
+        {/* Floating Action Button */}
+        <FAB
+          icon="plus"
+          style={[styles.fab, { backgroundColor: colors.primary }]}
+          onPress={() => router.push('/add-customer')}
+          color={colors.textInverse}
+          label="Add Customer"
+        />
+      </View>
     </PageTransition>
   );
 }
@@ -330,26 +280,40 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
-
+  scrollView: {
+    flex: 1,
+  },
+  scrollViewContent: {
+    paddingBottom: 80, // Add padding for FAB
+  },
   headerContainer: {
-    backgroundColor: '#fe4c24',
-    paddingTop: 8,
+    paddingTop: 20,
     paddingHorizontal: 20,
-    paddingBottom: 8,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: 65,
+    paddingBottom: 20,
     position: 'relative',
   },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: 'white',
-    textAlign: 'center',
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     flex: 1,
+  },
+  headerLeft: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  headerRight: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  welcomeText: {
+    opacity: 0.9,
+    marginBottom: 4,
+    fontWeight: '500',
+  },
+  userNameText: {
+    fontWeight: 'bold',
   },
   headerRightAction: {
     position: 'absolute',
@@ -360,101 +324,154 @@ const styles = StyleSheet.create({
   loadingContainer: {
     padding: 16,
   },
-  dashboardHeader: {
-    backgroundColor: 'white',
+  // Welcome Card Styles
+  welcomeCard: {
     margin: 16,
-    borderRadius: 16,
+    marginBottom: 12,
     padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  headerTop: {
+  welcomeCardContent: {
+    flex: 1,
+  },
+  welcomeCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
-  },
-  welcomeSection: {
-    flex: 1,
-  },
-  welcomeText: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 4,
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  profileButton: {
-    borderRadius: 25,
-  },
-  headerAvatar: {
-    backgroundColor: '#fe4c24',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  statCard: {
-    flex: 1,
-    alignItems: 'center',
-    padding: 16,
-    marginHorizontal: 4,
-    borderRadius: 12,
-    backgroundColor: 'white',
-  },
-  statIcon: {
-    margin: 0,
-    marginBottom: 8,
-  },
-  statNumber: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-  },
-  quickActionsContainer: {
-    margin: 16,
-    marginTop: 8,
-  },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 20,
-  },
-  quickActionsColumn: {
-    flex: 1,
-    gap: 16,
-  },
-  quickActionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    gap: 12,
-  },
-  quickActionAvatar: {
-    margin: 0,
-  },
-  quickActionTitle: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#333',
-    flex: 1,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
     marginBottom: 16,
   },
-  customersSection: {
+  welcomeTextSection: {
+    flex: 1,
+    marginRight: 16,
+  },
+  welcomeGreeting: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 4,
+    opacity: 0.8,
+  },
+  welcomeName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  welcomeSubtext: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    opacity: 0.7,
+  },
+  welcomeAvatarSection: {
+    alignItems: 'center',
+  },
+  avatarContainer: {
+    borderRadius: 30,
+    padding: 5,
+  },
+  welcomeAvatar: {
+    backgroundColor: 'transparent',
+  },
+  welcomeAvatarText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  welcomeDecorative: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 16,
+    borderTopWidth: 1,
+  },
+  decorativeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  decorativeLine: {
+    height: 1,
+    flex: 1,
+    marginHorizontal: 12,
+  },
+  // Quick Status Card Styles
+  quickStatusCard: {
+    margin: 16,
+    marginTop: 8,
+    marginBottom: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  quickStatusContent: {
+    flex: 1,
+  },
+  quickStatusTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  quickStatusGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  quickStatusItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  statusIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginBottom: 6,
+  },
+  statusLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  statusValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+
+  statsCard: {
+    margin: 16,
+    padding: 20,
+    borderRadius: 16,
+    flex: 1,
+  },
+  statsTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    flexWrap: 'wrap',
+    flex: 1,
+  },
+  statItem: {
+    alignItems: 'center',
+    marginVertical: 10,
+    flex: 1,
+    minWidth: 80,
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  statLabel: {
+    fontSize: 14,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  sectionContainer: {
     margin: 16,
     marginTop: 8,
   },
@@ -464,9 +481,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  viewAllText: {
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  seeAllText: {
     fontSize: 14,
-    color: '#fe4c24',
     fontWeight: '600',
   },
   customerCardContainer: {
@@ -478,16 +498,19 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: '#f0f0f0',
+    flex: 1,
   },
   customerCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    flex: 1,
   },
   customerInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    flexShrink: 1,
   },
   customerAvatar: {
     marginRight: 12,
@@ -503,16 +526,15 @@ const styles = StyleSheet.create({
   customerName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 4,
   },
   customerPhone: {
     fontSize: 13,
     color: '#666',
   },
-  customerBalance: {
-    alignItems: 'flex-end',
+  balanceRow: {
     flexDirection: 'row',
+    alignItems: 'baseline',
   },
   balanceAmount: {
     fontSize: 16,
@@ -521,8 +543,10 @@ const styles = StyleSheet.create({
   },
   balanceLabel: {
     fontSize: 11,
-    color: '#666',
-    marginRight: 8,
+    marginRight: 4,
+  },
+  balanceType: {
+    fontSize: 11,
   },
   chevronIcon: {
     margin: 0,
@@ -534,15 +558,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 20,
   },
-  emptyStateText: {
+  emptyStateTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 8,
   },
   emptyStateSubtext: {
     fontSize: 14,
-    color: '#666',
     textAlign: 'center',
     marginBottom: 20,
   },

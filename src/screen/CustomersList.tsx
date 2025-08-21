@@ -1,58 +1,58 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, FlatList, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import {
-  Button,
-  Avatar,
-  IconButton,
-  Text,
-  Searchbar,
-  Surface,
-  FAB,
-  Chip,
-} from 'react-native-paper';
-import { useRouter } from 'expo-router';
+import { Avatar, IconButton, Text, Searchbar, Surface, FAB, Chip } from 'react-native-paper';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { getCustomers, getUserProfile } from '~/lib/db';
 import { StatusBar } from 'expo-status-bar';
 import { CustomerCardSkeleton } from '../../components/SkeletonLoader';
 import PageTransition from '../../components/PageTransition';
 
-interface Customer {
-  id: number;
-  name: string;
-  phone: string;
-  type: string;
-  total_balance: number;
-}
-
 export default function CustomersListScreen() {
+  interface Customer {
+    id: number;
+    name: string;
+    phone: string;
+    type: string;
+    photo?: string;
+    total_balance: number;
+  }
+
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeCard, setActiveCard] = useState<string | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<string>('All');
+  const [searchQuery, setSearchQuery] = useState('');
   const [profile, setProfile] = useState<any>(null);
-  const router = useRouter();
   const [loading, setLoading] = useState<boolean>(true);
+  const router = useRouter();
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [customersResult, profileResult] = await Promise.all([
-          getCustomers(),
-          getUserProfile(),
-        ]);
-        setCustomers(customersResult as Customer[]);
-        setFilteredCustomers(customersResult as Customer[]);
-        setProfile(profileResult);
-      } catch (error) {
-        console.error('Error loading data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [customersResult, profileResult] = await Promise.all([
+        getCustomers(),
+        getUserProfile(),
+      ]);
+      setCustomers(customersResult as Customer[]);
+      setFilteredCustomers(customersResult as Customer[]);
+      setProfile(profileResult);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  // Load data on initial mount
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Refresh data every time the screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
 
   useEffect(() => {
     let filtered = customers;
@@ -74,36 +74,26 @@ export default function CustomersListScreen() {
     setFilteredCustomers(filtered);
   }, [searchQuery, customers, selectedFilter]);
 
-  const handlePressIn = (id: number) => {
-    setActiveCard(id.toString());
-  };
-
-  const handlePressOut = () => {
-    setActiveCard(null);
-  };
-
   const renderCustomer = ({ item }: { item: Customer }) => (
     <TouchableOpacity
-      onPressIn={() => handlePressIn(item.id)}
-      onPressOut={handlePressOut}
       onPress={() => router.push(`/transaction/${item.id}`)}
       style={styles.customerCardContainer}>
-      <Surface
-        style={[
-          styles.customerCard,
-          activeCard === item.id.toString() && styles.customerCardActive,
-        ]}>
+      <Surface style={styles.customerCard} elevation={0}>
         <View style={styles.customerCardContent}>
           <View style={styles.customerInfo}>
-            <Avatar.Text
-              size={50}
-              label={item.name ? item.name.charAt(0).toUpperCase() : '?'}
-              style={[
-                styles.customerAvatar,
-                { backgroundColor: item.type === 'Customer' ? '#fe4c24' : '#4CAF50' },
-              ]}
-              labelStyle={styles.avatarLabel}
-            />
+            {item.photo ? (
+              <Avatar.Image size={50} source={{ uri: item.photo }} style={styles.customerAvatar} />
+            ) : (
+              <Avatar.Text
+                size={50}
+                label={item.name ? item.name.charAt(0).toUpperCase() : '?'}
+                style={[
+                  styles.customerAvatar,
+                  { backgroundColor: item.type === 'Customer' ? '#fe4c24' : '#4CAF50' },
+                ]}
+                labelStyle={styles.avatarLabel}
+              />
+            )}
             <View style={styles.customerDetails}>
               <Text style={styles.customerName}>{item.name}</Text>
               <Text style={styles.customerPhone}>
@@ -126,7 +116,24 @@ export default function CustomersListScreen() {
             </View>
           </View>
 
-          <IconButton icon="chevron-right" size={24} iconColor="#666" style={styles.chevronIcon} />
+          <View style={styles.customerActions}>
+            <IconButton
+              icon="pencil"
+              size={20}
+              iconColor="#666"
+              style={styles.editButton}
+              onPress={(e) => {
+                e.stopPropagation();
+                router.push(`/customer-edit/${item.id}`);
+              }}
+            />
+            <IconButton
+              icon="chevron-right"
+              size={24}
+              iconColor="#666"
+              style={styles.chevronIcon}
+            />
+          </View>
         </View>
       </Surface>
     </TouchableOpacity>
@@ -173,8 +180,7 @@ export default function CustomersListScreen() {
         onChangeText={setSearchQuery}
         value={searchQuery}
         style={styles.searchBar}
-        inputStyle={styles.searchInput}
-        iconColor="#fe4c24"
+        placeholderTextColor="#666"
       />
 
       {renderFilterChips()}
@@ -200,12 +206,13 @@ export default function CustomersListScreen() {
           : 'Add your first customer to get started'}
       </Text>
       {!searchQuery && (
-        <Button
-          mode="contained"
+        <IconButton
+          icon="plus"
+          size={20}
+          iconColor="white"
+          style={styles.emptyStateButton}
           onPress={() => router.push('/add-customer')}
-          style={styles.emptyStateButton}>
-          Add Customer
-        </Button>
+        />
       )}
     </Surface>
   );
@@ -329,6 +336,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa',
     borderRadius: 12,
     marginBottom: 16,
+    paddingHorizontal: 10,
+    fontSize: 16,
+    color: '#333',
   },
   searchInput: {
     fontSize: 16,
@@ -384,10 +394,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 12,
     padding: 16,
-  },
-  customerCardActive: {
-    borderColor: '#fe4c24',
-    borderWidth: 2,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
   },
   customerCardContent: {
     flexDirection: 'row',
@@ -439,6 +447,13 @@ const styles = StyleSheet.create({
   },
   chevronIcon: {
     margin: 0,
+  },
+  customerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  editButton: {
+    marginRight: 8,
   },
   emptyState: {
     backgroundColor: 'white',

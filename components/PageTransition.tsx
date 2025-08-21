@@ -24,7 +24,7 @@ export default function PageTransition({ children, style, duration = 150 }: Page
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [duration, fadeAnim, slideAnim]);
 
   return (
     <Animated.View

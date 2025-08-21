@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { Animated, StyleSheet, Dimensions } from 'react-native';
 import { Surface, Text, IconButton } from 'react-native-paper';
 
@@ -21,6 +21,23 @@ export default function Toast({
 }: ToastProps) {
   const translateY = useRef(new Animated.Value(-100)).current;
   const opacity = useRef(new Animated.Value(0)).current;
+
+  const hideToast = useCallback(() => {
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: -100,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      onHide?.();
+    });
+  }, [onHide, translateY, opacity]);
 
   useEffect(() => {
     if (visible) {
@@ -47,26 +64,9 @@ export default function Toast({
     } else {
       hideToast();
     }
-  }, [visible]);
+  }, [visible, duration, hideToast, opacity, translateY]);
 
-  const hideToast = () => {
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: -100,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 0,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      onHide?.();
-    });
-  };
-
-  const getBackgroundColor = () => {
+  const getBackgroundColor = useCallback(() => {
     switch (type) {
       case 'success':
         return '#4CAF50';
@@ -77,9 +77,9 @@ export default function Toast({
       default:
         return '#4CAF50';
     }
-  };
+  }, [type]);
 
-  const getIcon = () => {
+  const getIcon = useCallback(() => {
     switch (type) {
       case 'success':
         return 'check-circle';
@@ -90,7 +90,7 @@ export default function Toast({
       default:
         return 'check-circle';
     }
-  };
+  }, [type]);
 
   if (!visible) return null;
 

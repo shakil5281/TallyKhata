@@ -24,11 +24,13 @@ import { addCustomer } from '~/lib/db';
 import { StatusBar } from 'expo-status-bar';
 import PageTransition from '../../components/PageTransition';
 import { useToast } from '~/context/ToastContext';
+import PhotoPicker from '../../components/PhotoPicker';
 
 export default function AddCustomerScreen() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [type, setType] = useState<'Customer' | 'Supplier'>('Customer');
+  const [photo, setPhoto] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<any>({});
   const router = useRouter();
@@ -63,7 +65,7 @@ export default function AddCustomerScreen() {
     try {
       setSaving(true);
 
-      const data = await addCustomer({ name: name.trim(), phone, type });
+      const data = await addCustomer({ name: name.trim(), phone, type, photo });
       console.log('Customer added:', data);
 
       showToast(`${type} "${name.trim()}" added successfully!`, 'success');
@@ -158,7 +160,7 @@ export default function AddCustomerScreen() {
           icon="arrow-left"
           size={24}
           iconColor="white"
-          onPress={() => router.back()}
+          onPress={() => router.push('/')}
           style={styles.headerLeftAction}
         />
         <Text style={styles.headerTitle}>Add Customer</Text>
@@ -185,14 +187,12 @@ export default function AddCustomerScreen() {
           {/* Avatar Section */}
           <Surface style={styles.avatarCard}>
             <View style={styles.avatarSection}>
-              <Avatar.Text
+              <PhotoPicker
+                currentPhoto={photo}
+                onPhotoSelected={setPhoto}
                 size={80}
-                label={name ? name.charAt(0).toUpperCase() : '?'}
-                style={[
-                  styles.avatar,
-                  { backgroundColor: type === 'Customer' ? '#fe4c24' : '#4CAF50' },
-                ]}
-                labelStyle={styles.avatarLabel}
+                showLabel={true}
+                customerName={name || 'Customer'}
               />
               <Text style={styles.avatarTitle}>Add New {type}</Text>
               <Text style={styles.avatarSubtitle}>Fill in the details below</Text>

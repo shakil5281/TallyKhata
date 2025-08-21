@@ -112,8 +112,6 @@ export default function LoadingDemo() {
           subMessage="Please wait while we prepare your data"
         />
       )}
-
-
     </ScrollView>
   );
 }

@@ -51,6 +51,11 @@ export default function AddTransactionScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleBackPress = () => {
+    // Navigate back to home with refresh parameter
+    router.push('/');
+  };
+
   const handleSaveTransaction = async () => {
     if (!validateForm()) {
       return;
@@ -68,9 +73,9 @@ export default function AddTransactionScreen() {
         showToast('Transaction added successfully!', 'success');
       }
 
-      // Small delay to show toast
+      // Small delay to show toast, then navigate back to home
       setTimeout(() => {
-        router.push(`/transaction/${id}`);
+        router.push('/');
       }, 100);
     } catch (error) {
       console.error('Error saving transaction:', error);
@@ -209,7 +214,7 @@ export default function AddTransactionScreen() {
             icon="arrow-left"
             size={24}
             iconColor="white"
-            onPress={() => router.back()}
+            onPress={handleBackPress}
             style={styles.headerLeftAction}
           />
           <Text style={styles.headerTitle}>Add Transaction</Text>
@@ -232,7 +237,7 @@ export default function AddTransactionScreen() {
           icon="arrow-left"
           size={24}
           iconColor="white"
-          onPress={() => router.back()}
+          onPress={handleBackPress}
           style={styles.headerLeftAction}
         />
         <Text style={styles.headerTitle}>

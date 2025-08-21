@@ -21,12 +21,7 @@ import {
   Surface,
 } from 'react-native-paper';
 import { useRouter } from 'expo-router';
-import {
-  ProfileUpdateInput,
-  getUserProfile,
-  updateUserProfile,
-  getDashboardStats,
-} from '~/lib/db';
+import { ProfileUpdateInput, getUserProfile, updateUserProfile, getDashboardStats } from '~/lib/db';
 import { StatusBar } from 'expo-status-bar';
 import { useToast } from '~/context/ToastContext';
 
@@ -129,7 +124,8 @@ export default function ProfileEditScreen() {
 
       if (success) {
         // Navigate back to settings
-        router.back();
+        router.push('/');
+        router.replace('/');
 
         // Show success toast after a brief delay
         setTimeout(() => {
@@ -168,7 +164,13 @@ export default function ProfileEditScreen() {
     <>
       <StatusBar style="light" />
       <Appbar.Header style={{ backgroundColor: '#fe4c24' }}>
-        <Appbar.BackAction color="white" onPress={() => router.back()} />
+        <Appbar.BackAction
+          color="white"
+          onPress={() => {
+            router.push('/');
+            router.replace('/');
+          }}
+        />
         <Appbar.Content title="Edit Profile" titleStyle={{ color: 'white', fontWeight: 'bold' }} />
         <Appbar.Action
           icon={saving ? 'loading' : 'check'}

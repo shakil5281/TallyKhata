@@ -15,6 +15,7 @@ export const initDB = async () => {
       name TEXT NOT NULL,
       phone TEXT,
       type TEXT,
+      photo TEXT,
       total_balance REAL DEFAULT 0
     );
 
@@ -56,25 +57,61 @@ export const initDB = async () => {
     );
   `);
 
+  // Run database migrations
+  await runMigrations();
+
   // Initialize default profile and settings
   await initializeDefaultProfile();
+};
+
+// Database migration function
+const runMigrations = async () => {
+  try {
+    // Check if photo column exists in customers table
+    const tableInfo = await db.getAllAsync('PRAGMA table_info(customers)');
+    const hasPhotoColumn = tableInfo.some((col: any) => col.name === 'photo');
+
+    if (!hasPhotoColumn) {
+      console.log('🔄 Running database migration: Adding photo column to customers table');
+      await db.execAsync('ALTER TABLE customers ADD COLUMN photo TEXT');
+      console.log('✅ Migration completed: photo column added');
+    }
+  } catch (error) {
+    console.error('❌ Migration failed:', error);
+    // If migration fails, recreate the table
+    console.log('🔄 Recreating customers table with new schema...');
+    await db.execAsync('DROP TABLE IF EXISTS customers');
+    await db.execAsync(`
+      CREATE TABLE customers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        phone TEXT,
+        type TEXT,
+        photo TEXT,
+        total_balance REAL DEFAULT 0
+      )
+    `);
+    console.log('✅ Customers table recreated with photo column');
+  }
 };
 
 type CustomerInput = {
   name: string;
   phone: string;
   type: 'Customer' | 'Supplier';
+  photo?: string;
 };
 
-export const addCustomer = async ({ name, phone, type }: CustomerInput) => {
+export const addCustomer = async ({ name, phone, type, photo }: CustomerInput) => {
   try {
     if (!db) await initDB(); // Ensure DB is initialized
 
     // Insert the customer into the database
-    await db.runAsync('INSERT INTO customers (name, phone, type) VALUES (?, ?, ?)', [
+    await db.runAsync('INSERT INTO customers (name, phone, type, photo) VALUES (?, ?, ?, ?)', [
       name,
       phone,
       type,
+      photo || null,
     ]);
 
     console.log('Customer added successfully');
@@ -86,6 +123,53 @@ export const addCustomer = async ({ name, phone, type }: CustomerInput) => {
 export const getCustomers = async () => {
   if (!db) await initDB();
   return await db.getAllAsync('SELECT * FROM customers');
+};
+
+export const getCustomerById = async (id: number) => {
+  if (!db) await initDB();
+  return await db.getFirstAsync('SELECT * FROM customers WHERE id = ?', [id]);
+};
+
+export const updateCustomerPhoto = async (customerId: number, photoUri: string) => {
+  try {
+    if (!db) await initDB();
+
+    await db.runAsync('UPDATE customers SET photo = ? WHERE id = ?', [photoUri, customerId]);
+    console.log('Customer photo updated successfully');
+    return true;
+  } catch (err) {
+    console.error('Failed to update customer photo:', err);
+    return false;
+  }
+};
+
+export const updateCustomer = async (customerId: number, updates: Partial<CustomerInput>) => {
+  try {
+    if (!db) await initDB();
+
+    const updateKeys = Object.keys(updates).filter(
+      (key) => updates[key as keyof CustomerInput] !== undefined
+    );
+
+    if (updateKeys.length === 0) {
+      console.log('No updates to apply');
+      return true;
+    }
+
+    const setClause = updateKeys.map((key) => `${key} = ?`).join(', ');
+    const values = updateKeys
+      .map((key) => updates[key as keyof CustomerInput])
+      .filter((value) => value !== undefined) as (string | number)[];
+
+    const query = `UPDATE customers SET ${setClause} WHERE id = ?`;
+    await db.runAsync(query, [...values, customerId]);
+
+    console.log('Customer updated successfully');
+    return true;
+  } catch (err) {
+    console.error('Failed to update customer:', err);
+    return false;
+  }
 };
 
 export const addTransaction = async (
