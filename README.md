@@ -1,6 +1,6 @@
 # 🧮 TallyKhata - Digital Ledger & Business Management
 
-[![EAS Build](https://github.com/{username}/TallyKhata/workflows/EAS%20Build/badge.svg)](https://github.com/{username}/TallyKhata/actions/workflows/eas-build.yml)
+[![EAS Build - Android](https://github.com/{username}/TallyKhata/workflows/EAS%20Build%20-%20Android%20Only/badge.svg)](https://github.com/{username}/TallyKhata/actions/workflows/eas-build.yml)
 [![Quality Check](https://github.com/{username}/TallyKhata/workflows/Quality%20Check/badge.svg)](https://github.com/{username}/TallyKhata/actions/workflows/quality-check.yml)
 [![Deploy](https://github.com/{username}/TallyKhata/workflows/Deploy%20to%20Production/badge.svg)](https://github.com/{username}/TallyKhata/actions/workflows/deploy.yml)
 
@@ -143,10 +143,10 @@ See [GITHUB_ACTIONS_SETUP.md](./GITHUB_ACTIONS_SETUP.md) for detailed setup inst
 
 ## 📱 Supported Platforms
 
-- ✅ Android (APK/AAB)
-- ✅ iOS (IPA)
-- ✅ Web (Progressive Web App)
-- ✅ Expo Go (Development)
+- ✅ **Android (APK/AAB)** - Primary platform with automated builds
+- ✅ **Web (Progressive Web App)** - Cross-platform web version
+- ✅ **Expo Go (Development)** - Development and testing
+- 📱 **iOS** - Available for development (manual builds)
 
 ## 🛠️ Tech Stack
 

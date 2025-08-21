@@ -10,6 +10,7 @@
     "migrate-db": "node scripts/migrateDatabase.js",
     "reset": "node scripts/clearDatabase.js && expo start --clear",
     "setup-actions": "node scripts/setup-github-actions.js",
+    "build-android": "node scripts/build-android.js",
     "prebuild": "expo prebuild",
     "lint": "eslint \"**/*.{js,jsx,ts,tsx}\" && prettier -c \"**/*.{js,jsx,ts,tsx,json}\"",
     "format": "eslint \"**/*.{js,jsx,ts,tsx}\" --fix && prettier \"**/*.{js,jsx,ts,tsx,json}\" --write",

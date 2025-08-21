@@ -9,8 +9,8 @@
 const fs = require('fs');
 const path = require('path');
 
-console.log('🚀 TallyKhata GitHub Actions Setup');
-console.log('===================================');
+console.log('🚀 TallyKhata GitHub Actions Setup (Android Only)');
+console.log('================================================');
 
 // Check if workflows directory exists
 const workflowsDir = path.join(__dirname, '..', '.github', 'workflows');
@@ -62,6 +62,11 @@ console.log('');
 console.log('4. For production releases, create git tags:');
 console.log('   git tag v1.0.0');
 console.log('   git push origin v1.0.0');
+console.log('');
+console.log('📱 Android Build Profiles:');
+console.log('   - Development: APK for testing');
+console.log('   - Preview: APK for internal testing');
+console.log('   - Production: AAB for Play Store');
 console.log('');
 console.log('📚 See GITHUB_ACTIONS_SETUP.md for detailed instructions');
 console.log('');
