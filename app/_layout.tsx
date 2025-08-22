@@ -5,6 +5,7 @@ import { StatusBar as RNStatusBar, Platform } from 'react-native';
 import '../global.css';
 
 import { ThemeProvider, useTheme } from '~/context/ThemeContext';
+import { AuthProvider } from '~/context/AuthContext';
 import SplashScreen from '../components/SplashScreen';
 import { ToastProvider } from '~/context/ToastContext';
 import { initDB, initializeDefaultProfile } from '~/lib/db';
@@ -108,7 +109,9 @@ function AppContent() {
 export default function RootLayout() {
   return (
     <ThemeProvider>
-      <AppContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </ThemeProvider>
   );
 }

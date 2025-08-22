@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Updates from 'expo-updates';
 import PageTransition from '../../components/PageTransition';
 import { useTheme } from '~/context/ThemeContext';
+import UserProfile from '../../components/UserProfile';
 
 export default function SettingsScreen() {
   const [profile, setProfile] = useState<any>(null);
@@ -212,9 +213,15 @@ export default function SettingsScreen() {
           {renderHeader()}
 
           <View style={styles.content}>
+            {/* Google Account Section */}
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Google Account</Text>
+              <UserProfile />
+            </View>
+
             {/* Profile Section */}
             <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}></Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Local Profile</Text>
               <Surface style={[styles.sectionCard, { backgroundColor: colors.surface }]} elevation={0}>
                 {renderSettingItem(
                   'account-edit',

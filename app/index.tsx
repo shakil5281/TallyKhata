@@ -7,6 +7,7 @@ import CustomersListScreen from '~/screen/CustomersList';
 import SettingsScreen from '~/screen/Settings';
 import { useTheme } from '~/context/ThemeContext';
 import ModernStatusBar from '../components/ModernStatusBar';
+import ProtectedRoute from '../components/ProtectedRoute';
 
 export default function TabLayout() {
   const { theme } = useTheme();
@@ -48,25 +49,27 @@ export default function TabLayout() {
   });
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <ModernStatusBar />
-      <BottomNavigation
-        navigationState={{ index, routes }}
-        onIndexChange={setIndex}
-        renderScene={renderScene}
-        barStyle={[
-          styles.bottomNavBar,
-          {
-            backgroundColor: colors.bottomNavBackground,
-            borderTopColor: colors.bottomNavBorder,
-          },
-        ]}
-        activeColor={colors.bottomNavActive}
-        inactiveColor={colors.bottomNavInactive}
-        activeIndicatorStyle={[styles.activeIndicator, { backgroundColor: colors.primary + '20' }]}
-        style={styles.bottomNavigation}
-      />
-    </View>
+    <ProtectedRoute>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <ModernStatusBar />
+        <BottomNavigation
+          navigationState={{ index, routes }}
+          onIndexChange={setIndex}
+          renderScene={renderScene}
+          barStyle={[
+            styles.bottomNavBar,
+            {
+              backgroundColor: colors.bottomNavBackground,
+              borderTopColor: colors.bottomNavBorder,
+            },
+          ]}
+          activeColor={colors.bottomNavActive}
+          inactiveColor={colors.bottomNavInactive}
+          activeIndicatorStyle={[styles.activeIndicator, { backgroundColor: colors.primary + '20' }]}
+          style={styles.bottomNavigation}
+        />
+      </View>
+    </ProtectedRoute>
   );
 }
 
