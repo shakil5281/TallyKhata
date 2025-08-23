@@ -8,13 +8,7 @@ import {
   RefreshControl,
   Dimensions,
 } from 'react-native';
-import {
-  Searchbar,
-  IconButton,
-  Avatar,
-  FAB,
-  Divider,
-} from 'react-native-paper';
+import { Searchbar, IconButton, Avatar, FAB, Divider } from 'react-native-paper';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useTheme } from '~/context/ThemeContext';
 import { getCustomers } from '~/lib/db';
@@ -104,9 +98,7 @@ export default function CustomersListScreen() {
 
   const renderHeader = () => (
     <View style={[styles.header, { backgroundColor: colors.primary }]}>
-      <Text style={[styles.headerTitle, { color: colors.textInverse }]}>
-        গ্রাহক তালিকা
-      </Text>
+      <Text style={[styles.headerTitle, { color: colors.textInverse }]}>গ্রাহক তালিকা</Text>
       <Text style={[styles.headerSubtitle, { color: colors.textInverse }]}>
         {customers.length} জন গ্রাহক
       </Text>
@@ -130,14 +122,20 @@ export default function CustomersListScreen() {
 
   const renderFilters = () => (
     <View style={styles.filterContainer}>
-      <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>
-        ফিল্টার:
-      </Text>
+      <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>ফিল্টার:</Text>
       <View style={styles.filterButtons}>
         {[
           { key: 'all', label: 'সবাই', count: customers.length },
-          { key: 'credit', label: 'পাওনাদার', count: customers.filter(c => c.total_balance > 0).length },
-          { key: 'debit', label: 'দেনাদার', count: customers.filter(c => c.total_balance < 0).length },
+          {
+            key: 'credit',
+            label: 'পাওনাদার',
+            count: customers.filter((c) => c.total_balance > 0).length,
+          },
+          {
+            key: 'debit',
+            label: 'দেনাদার',
+            count: customers.filter((c) => c.total_balance < 0).length,
+          },
         ].map((filter) => (
           <TouchableOpacity
             key={filter.key}
@@ -168,7 +166,6 @@ export default function CustomersListScreen() {
       style={[styles.customerItem, { backgroundColor: colors.surface }]}
       onPress={() => handleCustomerPress(item)}
       activeOpacity={0.7}>
-      
       <View style={styles.customerInfo}>
         <Avatar.Text
           size={50}
@@ -181,7 +178,7 @@ export default function CustomersListScreen() {
           ]}
           labelStyle={styles.avatarText}
         />
-        
+
         <View style={styles.customerDetails}>
           <Text style={[styles.customerName, { color: colors.text }]} numberOfLines={1}>
             {item.name}
@@ -197,9 +194,7 @@ export default function CustomersListScreen() {
 
       <View style={styles.customerActions}>
         <View style={styles.balanceSection}>
-          <Text style={[styles.balanceLabel, { color: colors.textSecondary }]}>
-            ব্যালেন্স
-          </Text>
+          <Text style={[styles.balanceLabel, { color: colors.textSecondary }]}>ব্যালেন্স</Text>
           <Text
             style={[
               styles.balanceAmount,
@@ -207,7 +202,8 @@ export default function CustomersListScreen() {
                 color: item.total_balance >= 0 ? colors.success : colors.error,
               },
             ]}>
-            {item.total_balance >= 0 ? '+' : ''}{item.total_balance}৳
+            {item.total_balance >= 0 ? '+' : ''}
+            {item.total_balance}৳
           </Text>
         </View>
 
@@ -215,11 +211,7 @@ export default function CustomersListScreen() {
           style={[styles.transactionButton, { backgroundColor: colors.secondary }]}
           onPress={() => handleTransactionPress(item)}
           activeOpacity={0.8}>
-          <IconButton
-            icon="cash-plus"
-            size={20}
-            iconColor={colors.textInverse}
-          />
+          <IconButton icon="cash-plus" size={20} iconColor={colors.textInverse} />
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -227,14 +219,8 @@ export default function CustomersListScreen() {
 
   const renderEmptyState = () => (
     <View style={[styles.emptyContainer, { backgroundColor: colors.background }]}>
-      <IconButton
-        icon="account-group-outline"
-        size={80}
-        iconColor={colors.textSecondary}
-      />
-      <Text style={[styles.emptyTitle, { color: colors.text }]}>
-        কোন গ্রাহক পাওয়া যায়নি
-      </Text>
+      <IconButton icon="account-group-outline" size={80} iconColor={colors.textSecondary} />
+      <Text style={[styles.emptyTitle, { color: colors.text }]}>কোন গ্রাহক পাওয়া যায়নি</Text>
       <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
         নতুন গ্রাহক যোগ করে শুরু করুন
       </Text>
@@ -242,9 +228,7 @@ export default function CustomersListScreen() {
         style={[styles.emptyButton, { backgroundColor: colors.primary }]}
         onPress={handleAddCustomer}
         activeOpacity={0.8}>
-        <Text style={[styles.emptyButtonText, { color: colors.textInverse }]}>
-          গ্রাহক যোগ করুন
-        </Text>
+        <Text style={[styles.emptyButtonText, { color: colors.textInverse }]}>গ্রাহক যোগ করুন</Text>
       </TouchableOpacity>
     </View>
   );
@@ -252,9 +236,7 @@ export default function CustomersListScreen() {
   if (loading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
-        <Text style={[styles.loadingText, { color: colors.text }]}>
-          লোড হচ্ছে...
-        </Text>
+        <Text style={[styles.loadingText, { color: colors.text }]}>লোড হচ্ছে...</Text>
       </View>
     );
   }
@@ -265,7 +247,7 @@ export default function CustomersListScreen() {
         {renderHeader()}
         {renderSearchBar()}
         {renderFilters()}
-        
+
         <FlatList
           data={filteredCustomers}
           renderItem={renderCustomerItem}
@@ -282,7 +264,7 @@ export default function CustomersListScreen() {
           }
           ListEmptyComponent={renderEmptyState()}
         />
-        
+
         <FAB
           icon="plus"
           style={[styles.fab, { backgroundColor: colors.primary }]}
@@ -299,9 +281,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
+    paddingHorizontal: 10,
     alignItems: 'center',
   },
   headerTitle: {

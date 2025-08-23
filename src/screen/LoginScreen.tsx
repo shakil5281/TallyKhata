@@ -1,20 +1,33 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image, SafeAreaView } from 'react-native';
-import { GoogleSignInButton } from '../../components/GoogleSignInButton';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Image, SafeAreaView, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { useRouter } from 'expo-router';
 
 export const LoginScreen: React.FC = () => {
-  const { isLoading } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { signIn, isLoading: authLoading } = useAuth();
+  const router = useRouter();
 
-  const handleSignInSuccess = () => {
-    console.log('Google Sign-In successful');
+  const handleSignIn = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Error', 'Please enter both email and password');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      await signIn(email.trim(), password);
+      router.replace('/');
+    } catch (error) {
+      Alert.alert('Sign In Failed', 'Please check your credentials and try again');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSignInError = (error: string) => {
-    console.error('Google Sign-In error:', error);
-  };
-
-  if (isLoading) {
+  if (authLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
@@ -40,15 +53,41 @@ export const LoginScreen: React.FC = () => {
         <View style={styles.authSection}>
           <Text style={styles.welcomeText}>Welcome to TallyKhata</Text>
           <Text style={styles.descriptionText}>
-            Sign in with your Google account to access your digital ledger and manage your business accounts.
+            Sign in to access your digital ledger and manage your business accounts.
           </Text>
-          
-          <View style={styles.buttonContainer}>
-            <GoogleSignInButton
-              onSuccess={handleSignInSuccess}
-              onError={handleSignInError}
-              style={styles.signInButton}
+
+          <View style={styles.formContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor="#999999"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
             />
+            
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor="#999999"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+
+            <TouchableOpacity
+              style={[styles.signInButton, isLoading && styles.signInButtonDisabled]}
+              onPress={handleSignIn}
+              disabled={isLoading}
+            >
+              <Text style={styles.signInButtonText}>
+                {isLoading ? 'Signing In...' : 'Sign In'}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -123,12 +162,41 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     paddingHorizontal: 20,
   },
-  buttonContainer: {
+  formContainer: {
     width: '100%',
     maxWidth: 300,
   },
+  input: {
+    width: '100%',
+    height: 50,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    fontSize: 16,
+    backgroundColor: '#ffffff',
+  },
   signInButton: {
     width: '100%',
+    height: 50,
+    backgroundColor: '#fe4c24',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  signInButtonDisabled: {
+    backgroundColor: '#cccccc',
+  },
+  signInButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   footerSection: {
     alignItems: 'center',

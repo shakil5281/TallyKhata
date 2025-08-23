@@ -47,9 +47,7 @@ const AppInfoScreen = () => {
     <View style={[styles.header, { backgroundColor: colors.primary }]}>
       <View style={styles.headerContent}>
         <MaterialIcons name="info" size={48} color={colors.textInverse} />
-        <Text style={[styles.appName, { color: colors.textInverse }]}>
-          {appInfo.name}
-        </Text>
+        <Text style={[styles.appName, { color: colors.textInverse }]}>{appInfo.name}</Text>
         <Text style={[styles.version, { color: colors.textInverse }]}>
           সংস্করণ {appInfo.version}
         </Text>
@@ -59,31 +57,23 @@ const AppInfoScreen = () => {
 
   const renderAboutSection = () => (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        টালিখাতা সম্পর্কে
-      </Text>
-      
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>টালিখাতা সম্পর্কে</Text>
+
       <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
-        <Text style={[styles.description, { color: colors.text }]}>
-          {appInfo.description}
-        </Text>
+        <Text style={[styles.description, { color: colors.text }]}>{appInfo.description}</Text>
       </View>
     </View>
   );
 
   const renderFeaturesSection = () => (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        মূল বৈশিষ্ট্য
-      </Text>
-      
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>মূল বৈশিষ্ট্য</Text>
+
       <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
         {features.map((feature, index) => (
           <View key={index} style={styles.featureItem}>
             <MaterialIcons name="check-circle" size={20} color={colors.success} />
-            <Text style={[styles.featureText, { color: colors.text }]}>
-              {feature}
-            </Text>
+            <Text style={[styles.featureText, { color: colors.text }]}>{feature}</Text>
           </View>
         ))}
       </View>
@@ -92,37 +82,29 @@ const AppInfoScreen = () => {
 
   const renderCompanySection = () => (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        কোম্পানির তথ্য
-      </Text>
-      
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>কোম্পানির তথ্য</Text>
+
       <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
         <View style={styles.infoRow}>
           <MaterialIcons name="business" size={20} color={colors.primary} />
-          <Text style={[styles.infoText, { color: colors.text }]}>
-            {appInfo.company}
-          </Text>
+          <Text style={[styles.infoText, { color: colors.text }]}>{appInfo.company}</Text>
         </View>
-        
+
         <View style={styles.infoRow}>
           <MaterialIcons name="web" size={20} color={colors.primary} />
           <TouchableOpacity
             onPress={() => handleLink(appInfo.website, 'ওয়েবসাইট')}
             activeOpacity={0.7}>
-            <Text style={[styles.linkText, { color: colors.primary }]}>
-              {appInfo.website}
-            </Text>
+            <Text style={[styles.linkText, { color: colors.primary }]}>{appInfo.website}</Text>
           </TouchableOpacity>
         </View>
-        
+
         <View style={styles.infoRow}>
           <MaterialIcons name="support-agent" size={20} color={colors.primary} />
           <TouchableOpacity
             onPress={() => handleLink(`mailto:${appInfo.support}`, 'সহায়তা ইমেইল')}
             activeOpacity={0.7}>
-            <Text style={[styles.linkText, { color: colors.primary }]}>
-              {appInfo.support}
-            </Text>
+            <Text style={[styles.linkText, { color: colors.primary }]}>{appInfo.support}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -131,27 +113,21 @@ const AppInfoScreen = () => {
 
   const renderLegalSection = () => (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        আইনি ও সহায়তা
-      </Text>
-      
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>আইনি ও সহায়তা</Text>
+
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           style={[styles.legalButton, { borderColor: colors.border }]}
           onPress={() => handleLink(appInfo.privacy, 'গোপনীয়তা নীতি')}
           activeOpacity={0.7}>
-          <Text style={[styles.legalButtonText, { color: colors.text }]}>
-            গোপনীয়তা নীতি
-          </Text>
+          <Text style={[styles.legalButtonText, { color: colors.text }]}>গোপনীয়তা নীতি</Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity
           style={[styles.legalButton, { borderColor: colors.border }]}
           onPress={() => handleLink(appInfo.terms, 'ব্যবহারের শর্তাবলী')}
           activeOpacity={0.7}>
-          <Text style={[styles.legalButtonText, { color: colors.text }]}>
-            ব্যবহারের শর্তাবলী
-          </Text>
+          <Text style={[styles.legalButtonText, { color: colors.text }]}>ব্যবহারের শর্তাবলী</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -159,22 +135,18 @@ const AppInfoScreen = () => {
 
   const renderContactSection = () => (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        যোগাযোগ
-      </Text>
-      
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>যোগাযোগ</Text>
+
       <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
         <Text style={[styles.contactText, { color: colors.textSecondary }]}>
           আপনার কোন প্রশ্ন বা পরামর্শ থাকলে আমাদের সাথে যোগাযোগ করুন
         </Text>
-        
+
         <TouchableOpacity
           style={[styles.contactButton, { backgroundColor: colors.primary }]}
           onPress={() => handleLink(`mailto:${appInfo.support}`, 'ইমেইল পাঠান')}
           activeOpacity={0.7}>
-          <Text style={[styles.contactButtonText, { color: colors.textInverse }]}>
-            ইমেইল পাঠান
-          </Text>
+          <Text style={[styles.contactButtonText, { color: colors.textInverse }]}>ইমেইল পাঠান</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -184,7 +156,7 @@ const AppInfoScreen = () => {
     <PageTransition>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         {renderHeader()}
-        
+
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
@@ -205,9 +177,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 50,
-    paddingBottom: 30,
-    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
+    paddingHorizontal: 10,
     alignItems: 'center',
   },
   headerContent: {

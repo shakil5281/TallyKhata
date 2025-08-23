@@ -42,7 +42,8 @@
       "expo-secure-store",
       "expo-router",
       "expo-image-picker",
-      "@react-native-google-signin/google-signin"
+
+      "expo-mail-composer"
     ],
     "orientation": "portrait",
     "icon": "./assets/mainLogo.png",

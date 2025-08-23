@@ -67,7 +67,10 @@ export default function AddCustomerScreen() {
       const data = await addCustomer({ name: name.trim(), phone, type, photo });
       console.log('Customer added:', data);
 
-      showToast(`${type === 'Customer' ? 'গ্রাহক' : 'সরবরাহকারী'} "${name.trim()}" সফলভাবে যোগ হয়েছে!`, 'success');
+      showToast(
+        `${type === 'Customer' ? 'গ্রাহক' : 'সরবরাহকারী'} "${name.trim()}" সফলভাবে যোগ হয়েছে!`,
+        'success'
+      );
 
       // Small delay to show toast
       setTimeout(() => {
@@ -87,17 +90,10 @@ export default function AddCustomerScreen() {
 
   const renderHeader = () => (
     <View style={[styles.header, { backgroundColor: colors.primary }]}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={handleBackPress}
-        activeOpacity={0.7}>
-        <IconButton
-          icon="arrow-left"
-          size={24}
-          iconColor={colors.textInverse}
-        />
+      <TouchableOpacity style={styles.backButton} onPress={handleBackPress} activeOpacity={0.7}>
+        <IconButton icon="arrow-left" size={24} iconColor={colors.textInverse} />
       </TouchableOpacity>
-      
+
       <View style={styles.headerContent}>
         <Text style={[styles.headerTitle, { color: colors.textInverse }]}>
           নতুন গ্রাহক যোগ করুন
@@ -111,9 +107,7 @@ export default function AddCustomerScreen() {
 
   const renderTypeSelector = () => (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        যোগাযোগের ধরন
-      </Text>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>যোগাযোগের ধরন</Text>
       <View style={styles.typeButtonsContainer}>
         <TouchableOpacity
           style={[
@@ -135,7 +129,7 @@ export default function AddCustomerScreen() {
             গ্রাহক
           </Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity
           style={[
             styles.typeButton,
@@ -162,22 +156,14 @@ export default function AddCustomerScreen() {
 
   const renderPhotoSection = () => (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        প্রোফাইল ছবি
-      </Text>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>প্রোফাইল ছবি</Text>
       <View style={styles.photoContainer}>
         <PhotoPicker
-          photo={photo}
-          onPhotoChange={setPhoto}
+          currentPhoto={photo}
+          onPhotoSelected={setPhoto}
           size={80}
-          style={[
-            styles.photoPicker,
-            { backgroundColor: colors.surfaceSecondary },
-          ]}
         />
-        <Text style={[styles.photoHint, { color: colors.textSecondary }]}>
-          ছবি যোগ করা ঐচ্ছিক
-        </Text>
+        <Text style={[styles.photoHint, { color: colors.textSecondary }]}>ছবি যোগ করা ঐচ্ছিক</Text>
       </View>
     </View>
   );
@@ -185,14 +171,10 @@ export default function AddCustomerScreen() {
   const renderForm = () => (
     <View style={styles.formContainer}>
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          গ্রাহকের তথ্য
-        </Text>
-        
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>গ্রাহকের তথ্য</Text>
+
         <View style={styles.inputContainer}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>
-            নাম *
-          </Text>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>নাম *</Text>
           <TextInput
             mode="outlined"
             value={name}
@@ -214,16 +196,12 @@ export default function AddCustomerScreen() {
             error={!!errors.name}
           />
           {errors.name && (
-            <Text style={[styles.errorText, { color: colors.error }]}>
-              {errors.name}
-            </Text>
+            <Text style={[styles.errorText, { color: colors.error }]}>{errors.name}</Text>
           )}
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>
-            ফোন নম্বর *
-          </Text>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>ফোন নম্বর *</Text>
           <TextInput
             mode="outlined"
             value={phone}
@@ -246,9 +224,7 @@ export default function AddCustomerScreen() {
             error={!!errors.phone}
           />
           {errors.phone && (
-            <Text style={[styles.errorText, { color: colors.error }]}>
-              {errors.phone}
-            </Text>
+            <Text style={[styles.errorText, { color: colors.error }]}>{errors.phone}</Text>
           )}
         </View>
       </View>
@@ -265,25 +241,17 @@ export default function AddCustomerScreen() {
         onPress={handleAddCustomer}
         loading={saving}
         disabled={saving}
-        style={[
-          styles.saveButton,
-          { backgroundColor: colors.primary },
-        ]}
+        style={[styles.saveButton, { backgroundColor: colors.primary }]}
         contentStyle={styles.saveButtonContent}
         labelStyle={[styles.saveButtonText, { color: colors.textInverse }]}>
         {saving ? 'সংরক্ষণ হচ্ছে...' : 'গ্রাহক যোগ করুন'}
       </Button>
-      
+
       <TouchableOpacity
-        style={[
-          styles.cancelButton,
-          { borderColor: colors.border },
-        ]}
+        style={[styles.cancelButton, { borderColor: colors.border }]}
         onPress={handleBackPress}
         activeOpacity={0.7}>
-        <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>
-          বাতিল
-        </Text>
+        <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>বাতিল</Text>
       </TouchableOpacity>
     </View>
   );
@@ -292,7 +260,7 @@ export default function AddCustomerScreen() {
     <PageTransition>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         {renderHeader()}
-        
+
         <KeyboardAvoidingView
           style={styles.keyboardContainer}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -304,7 +272,7 @@ export default function AddCustomerScreen() {
             {renderForm()}
           </ScrollView>
         </KeyboardAvoidingView>
-        
+
         {renderActions()}
       </View>
     </PageTransition>
@@ -316,9 +284,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
+    paddingHorizontal: 10,
     flexDirection: 'row',
     alignItems: 'center',
   },

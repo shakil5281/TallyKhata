@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, RefreshControl } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  RefreshControl,
+} from 'react-native';
 import { IconButton, Card, Chip } from 'react-native-paper';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { getCustomerById, getTransactionsByCustomerId, deleteCustomer } from '~/lib/db';
@@ -37,7 +45,7 @@ export default function CustomerReportsScreen() {
       setLoading(true);
       const customerResult = await getCustomerById(Number(id));
       const transactionsResult = await getTransactionsByCustomerId(Number(id));
-      
+
       setCustomer(customerResult as Customer);
       setTransactions(transactionsResult as Transaction[]);
     } catch (error) {
@@ -73,63 +81,63 @@ export default function CustomerReportsScreen() {
   };
 
   const handleDeleteCustomer = () => {
-    Alert.alert(
-      'ব্যবহারকারী মুছুন',
-      `আপনি কি নিশ্চিত যে আপনি ${customer?.name} কে মুছতে চান?`,
-      [
-        { text: 'না', style: 'cancel' },
-        { 
-          text: 'হ্যাঁ, মুছুন', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteCustomer(Number(id));
-              Alert.alert('সফল', 'ব্যবহারকারী মুছে ফেলা হয়েছে', [
-                { text: 'ঠিক আছে', onPress: () => router.push('/customers-list') }
-              ]);
-            } catch (error) {
-              Alert.alert('ত্রুটি', 'ব্যবহারকারী মুছতে ব্যর্থ');
-            }
+    Alert.alert('ব্যবহারকারী মুছুন', `আপনি কি নিশ্চিত যে আপনি ${customer?.name} কে মুছতে চান?`, [
+      { text: 'না', style: 'cancel' },
+      {
+        text: 'হ্যাঁ, মুছুন',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteCustomer(Number(id));
+            Alert.alert('সফল', 'ব্যবহারকারী মুছে ফেলা হয়েছে', [
+              { text: 'ঠিক আছে', onPress: () => router.push('/customers-list') },
+            ]);
+          } catch (error) {
+            Alert.alert('ত্রুটি', 'ব্যবহারকারী মুছতে ব্যর্থ');
           }
-        }
-      ]
-    );
+        },
+      },
+    ]);
   };
 
   const getFilteredTransactions = () => {
     if (selectedPeriod === 'all') return transactions;
-    
+
     const now = new Date();
     const filterDate = new Date();
-    
+
     if (selectedPeriod === 'month') {
       filterDate.setMonth(now.getMonth() - 1);
     } else if (selectedPeriod === 'week') {
       filterDate.setDate(now.getDate() - 7);
     }
-    
-    return transactions.filter(t => new Date(t.createdAt) >= filterDate);
+
+    return transactions.filter((t) => new Date(t.createdAt) >= filterDate);
   };
 
   const calculateStats = () => {
     const filtered = getFilteredTransactions();
-    
+
     // Fix: Correct calculation logic
     // totalDebit = money you received (debit transactions)
     // totalCredit = money you gave (credit transactions)
-    const totalDebit = filtered.filter(t => t.type === 'debit').reduce((sum, t) => sum + t.amount, 0);
-    const totalCredit = filtered.filter(t => t.type === 'credit').reduce((sum, t) => sum + t.amount, 0);
-    
+    const totalDebit = filtered
+      .filter((t) => t.type === 'debit')
+      .reduce((sum, t) => sum + t.amount, 0);
+    const totalCredit = filtered
+      .filter((t) => t.type === 'credit')
+      .reduce((sum, t) => sum + t.amount, 0);
+
     // Balance: Credit (given) - Debit (received)
     // Positive = you have net money to receive
     // Negative = you have net money to pay
     const balance = totalCredit - totalDebit;
-    
+
     return {
-      totalDebit,    // Money you received
-      totalCredit,   // Money you gave
-      balance,       // Net balance
-      transactionCount: filtered.length
+      totalDebit, // Money you received
+      totalCredit, // Money you gave
+      balance, // Net balance
+      transactionCount: filtered.length,
     };
   };
 
@@ -142,7 +150,7 @@ export default function CustomerReportsScreen() {
       return date.toLocaleDateString('bn-BD', {
         year: 'numeric',
         month: 'long',
-        day: 'numeric'
+        day: 'numeric',
       });
     } catch (error) {
       return 'অবৈধ তারিখ';
@@ -162,21 +170,12 @@ export default function CustomerReportsScreen() {
 
   const renderHeader = () => (
     <View style={[styles.header, { backgroundColor: colors.primary }]}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={handleBackPress}
-        activeOpacity={0.7}>
-        <IconButton
-          icon="arrow-left"
-          size={24}
-          iconColor={colors.textInverse}
-        />
+      <TouchableOpacity style={styles.backButton} onPress={handleBackPress} activeOpacity={0.7}>
+        <IconButton icon="arrow-left" size={24} iconColor={colors.textInverse} />
       </TouchableOpacity>
-      
+
       <View style={styles.headerContent}>
-        <Text style={[styles.headerTitle, { color: colors.textInverse }]}>
-          গ্রাহকের রিপোর্ট
-        </Text>
+        <Text style={[styles.headerTitle, { color: colors.textInverse }]}>গ্রাহকের রিপোর্ট</Text>
         <Text style={[styles.headerSubtitle, { color: colors.textInverse }]}>
           {customer?.name || 'গ্রাহক'}
         </Text>
@@ -187,33 +186,21 @@ export default function CustomerReportsScreen() {
           style={styles.actionButton}
           onPress={() => router.push(`/customer-upgrade/${id}`)}
           activeOpacity={0.7}>
-          <IconButton
-            icon="star"
-            size={20}
-            iconColor={colors.accent}
-          />
+          <IconButton icon="star" size={20} iconColor={colors.accent} />
         </TouchableOpacity>
-        
+
         <TouchableOpacity
           style={styles.actionButton}
           onPress={handleEditCustomer}
           activeOpacity={0.7}>
-          <IconButton
-            icon="pencil"
-            size={20}
-            iconColor={colors.textInverse}
-          />
+          <IconButton icon="pencil" size={20} iconColor={colors.textInverse} />
         </TouchableOpacity>
-        
+
         <TouchableOpacity
           style={styles.actionButton}
           onPress={handleDeleteCustomer}
           activeOpacity={0.7}>
-          <IconButton
-            icon="delete"
-            size={20}
-            iconColor={colors.error}
-          />
+          <IconButton icon="delete" size={20} iconColor={colors.error} />
         </TouchableOpacity>
       </View>
     </View>
@@ -221,14 +208,12 @@ export default function CustomerReportsScreen() {
 
   const renderStats = () => {
     const stats = calculateStats();
-    
+
     return (
       <View style={styles.statsContainer}>
         {/* Explanation Section */}
         <View style={styles.explanationContainer}>
-          <Text style={[styles.explanationTitle, { color: colors.text }]}>
-            কিভাবে বুঝবেন?
-          </Text>
+          <Text style={[styles.explanationTitle, { color: colors.text }]}>কিভাবে বুঝবেন?</Text>
           <View style={styles.explanationContent}>
             <View style={styles.explanationItem}>
               <Text style={[styles.explanationIcon, { color: colors.success }]}>📥</Text>
@@ -241,7 +226,7 @@ export default function CustomerReportsScreen() {
                 </Text>
               </View>
             </View>
-            
+
             <View style={styles.explanationItem}>
               <Text style={[styles.explanationIcon, { color: colors.error }]}>📤</Text>
               <View style={styles.explanationText}>
@@ -256,56 +241,56 @@ export default function CustomerReportsScreen() {
           </View>
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          সারসংক্ষেপ
-        </Text>
-        
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>সারসংক্ষেপ</Text>
+
         {/* Period Summary */}
         <View style={styles.periodSummary}>
           <Text style={[styles.periodText, { color: colors.textSecondary }]}>
-            {selectedPeriod === 'all' ? 'সব সময়ের লেনদেন' : 
-             selectedPeriod === 'month' ? 'গত মাসের লেনদেন' : 
-             'গত সপ্তাহের লেনদেন'}
+            {selectedPeriod === 'all'
+              ? 'সব সময়ের লেনদেন'
+              : selectedPeriod === 'month'
+                ? 'গত মাসের লেনদেন'
+                : 'গত সপ্তাহের লেনদেন'}
           </Text>
           <Text style={[styles.periodCount, { color: colors.primary }]}>
             {stats.transactionCount} টি লেনদেন
           </Text>
         </View>
-        
+
         <View style={styles.statsGrid}>
           <Card style={[styles.statCard, { backgroundColor: colors.surface }]}>
             <View style={styles.statContent}>
               <Text style={[styles.statValue, { color: colors.success }]}>
                 {formatAmount(stats.totalCredit)}
               </Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                মোট দিলাম
-              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>মোট দিলাম</Text>
               <Text style={[styles.statSubLabel, { color: colors.textSecondary }]}>
                 (আপনি দিয়েছেন)
               </Text>
             </View>
           </Card>
-          
+
           <Card style={[styles.statCard, { backgroundColor: colors.surface }]}>
             <View style={styles.statContent}>
               <Text style={[styles.statValue, { color: colors.error }]}>
                 {formatAmount(stats.totalDebit)}
               </Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                মোট পেলাম
-              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>মোট পেলাম</Text>
               <Text style={[styles.statSubLabel, { color: colors.textSecondary }]}>
                 (আপনি পেয়েছেন)
               </Text>
             </View>
           </Card>
-          
+
           <Card style={[styles.statCard, { backgroundColor: colors.surface }]}>
             <View style={styles.statContent}>
-              <Text style={[styles.statValue, { 
-                color: stats.balance >= 0 ? colors.success : colors.error 
-              }]}>
+              <Text
+                style={[
+                  styles.statValue,
+                  {
+                    color: stats.balance >= 0 ? colors.success : colors.error,
+                  },
+                ]}>
                 {formatAmount(Math.abs(stats.balance))}
               </Text>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
@@ -316,25 +301,22 @@ export default function CustomerReportsScreen() {
               </Text>
             </View>
           </Card>
-          
+
           {/* Balance Explanation */}
           <View style={styles.balanceExplanation}>
             <Text style={[styles.balanceExplanationText, { color: colors.textSecondary }]}>
-              {stats.balance >= 0 
+              {stats.balance >= 0
                 ? `আপনি ${formatAmount(stats.balance)}৳ পাবেন (দিয়েছেন ${formatAmount(stats.totalCredit)}৳, পেয়েছেন ${formatAmount(stats.totalDebit)}৳)`
-                : `আপনি ${formatAmount(Math.abs(stats.balance))}৳ দেবেন (দিয়েছেন ${formatAmount(stats.totalCredit)}৳, পেয়েছেন ${formatAmount(stats.totalDebit)}৳)`
-              }
+                : `আপনি ${formatAmount(Math.abs(stats.balance))}৳ দেবেন (দিয়েছেন ${formatAmount(stats.totalCredit)}৳, পেয়েছেন ${formatAmount(stats.totalDebit)}৳)`}
             </Text>
           </View>
-          
+
           <Card style={[styles.statCard, { backgroundColor: colors.surface }]}>
             <View style={styles.statContent}>
               <Text style={[styles.statValue, { color: colors.info }]}>
                 {stats.transactionCount}
               </Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                লেনদেন
-              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>লেনদেন</Text>
             </View>
           </Card>
         </View>
@@ -344,52 +326,53 @@ export default function CustomerReportsScreen() {
 
   const renderPeriodFilter = () => (
     <View style={styles.filterContainer}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        সময়কাল
-      </Text>
-      
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>সময়কাল</Text>
+
       <View style={styles.filterChips}>
         <TouchableOpacity
           style={[
             styles.filterChip,
-            selectedPeriod === 'all' && { backgroundColor: colors.primary }
+            selectedPeriod === 'all' && { backgroundColor: colors.primary },
           ]}
           onPress={() => setSelectedPeriod('all')}
           activeOpacity={0.7}>
-          <Text style={[
-            styles.filterChipText,
-            { color: selectedPeriod === 'all' ? colors.textInverse : colors.text }
-          ]}>
+          <Text
+            style={[
+              styles.filterChipText,
+              { color: selectedPeriod === 'all' ? colors.textInverse : colors.text },
+            ]}>
             সব
           </Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity
           style={[
             styles.filterChip,
-            selectedPeriod === 'month' && { backgroundColor: colors.primary }
+            selectedPeriod === 'month' && { backgroundColor: colors.primary },
           ]}
           onPress={() => setSelectedPeriod('month')}
           activeOpacity={0.7}>
-          <Text style={[
-            styles.filterChipText,
-            { color: selectedPeriod === 'month' ? colors.textInverse : colors.text }
-          ]}>
+          <Text
+            style={[
+              styles.filterChipText,
+              { color: selectedPeriod === 'month' ? colors.textInverse : colors.text },
+            ]}>
             গত মাস
           </Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity
           style={[
             styles.filterChip,
-            selectedPeriod === 'week' && { backgroundColor: colors.primary }
+            selectedPeriod === 'week' && { backgroundColor: colors.primary },
           ]}
           onPress={() => setSelectedPeriod('week')}
           activeOpacity={0.7}>
-          <Text style={[
-            styles.filterChipText,
-            { color: selectedPeriod === 'week' ? colors.textInverse : colors.text }
-          ]}>
+          <Text
+            style={[
+              styles.filterChipText,
+              { color: selectedPeriod === 'week' ? colors.textInverse : colors.text },
+            ]}>
             গত সপ্তাহ
           </Text>
         </TouchableOpacity>
@@ -399,7 +382,7 @@ export default function CustomerReportsScreen() {
 
   const renderTransactions = () => {
     const filteredTransactions = getFilteredTransactions();
-    
+
     if (filteredTransactions.length === 0) {
       return (
         <View style={styles.emptyState}>
@@ -409,21 +392,25 @@ export default function CustomerReportsScreen() {
         </View>
       );
     }
-    
+
     return (
       <View style={styles.transactionsContainer}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          লেনদেনের তালিকা
-        </Text>
-        
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>লেনদেনের তালিকা</Text>
+
         {filteredTransactions.map((transaction, index) => (
-          <Card key={transaction.id} style={[styles.transactionCard, { backgroundColor: colors.surface }]}>
+          <Card
+            key={transaction.id}
+            style={[styles.transactionCard, { backgroundColor: colors.surface }]}>
             <View style={styles.transactionHeader}>
               <View style={styles.transactionType}>
-                <View style={[
-                  styles.typeIndicator,
-                  { backgroundColor: transaction.type === 'debit' ? colors.error : colors.success }
-                ]} />
+                <View
+                  style={[
+                    styles.typeIndicator,
+                    {
+                      backgroundColor: transaction.type === 'debit' ? colors.error : colors.success,
+                    },
+                  ]}
+                />
                 <Text style={[styles.transactionTypeText, { color: colors.text }]}>
                   {transaction.type === 'debit' ? 'পেলাম (আপনি পেয়েছেন)' : 'দিলাম (আপনি দিয়েছেন)'}
                 </Text>
@@ -432,7 +419,7 @@ export default function CustomerReportsScreen() {
                 {formatDate(transaction.createdAt)}
               </Text>
             </View>
-            
+
             <View style={styles.transactionDetails}>
               <Text style={[styles.transactionAmount, { color: colors.text }]}>
                 ৳{formatAmount(transaction.amount)}
@@ -452,9 +439,7 @@ export default function CustomerReportsScreen() {
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Text style={[styles.loadingText, { color: colors.text }]}>
-          লোড হচ্ছে...
-        </Text>
+        <Text style={[styles.loadingText, { color: colors.text }]}>লোড হচ্ছে...</Text>
       </View>
     );
   }
@@ -462,12 +447,10 @@ export default function CustomerReportsScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {renderHeader()}
-      
+
       <ScrollView
         style={styles.content}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }>
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
         {renderStats()}
         {renderPeriodFilter()}
         {renderTransactions()}
@@ -481,9 +464,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
+    paddingHorizontal: 10,
     flexDirection: 'row',
     alignItems: 'center',
   },

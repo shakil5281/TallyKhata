@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, Modal } from 'react-native';
-import { IconButton, Button } from 'react-native-paper';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Modal } from 'react-native';
+import { IconButton, TextInput } from 'react-native-paper';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { getCustomerById, addTransaction, deleteCustomer } from '~/lib/db';
 import { useTheme } from '~/context/ThemeContext';
@@ -21,10 +21,7 @@ export default function CustomerTransactionScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
   const [activeInput, setActiveInput] = useState<'dilam' | 'pelam' | null>(null);
-  const [calculatorValue, setCalculatorValue] = useState('0');
-  const [previousValue, setPreviousValue] = useState<number | null>(null);
-  const [operation, setOperation] = useState<string | null>(null);
-  const [waitingForOperand, setWaitingForOperand] = useState(false);
+
   const [showDropdown, setShowDropdown] = useState(false);
   const { id } = useLocalSearchParams();
   const router = useRouter();
@@ -57,211 +54,237 @@ export default function CustomerTransactionScreen() {
     router.back();
   };
 
-  // Calculator Functions
-  const inputDigit = (digit: string) => {
-    if (waitingForOperand) {
-      setCalculatorValue(digit);
-      setWaitingForOperand(false);
+  // New Calculation System Functions
+  const [calculationExpression, setCalculationExpression] = useState('');
+
+  const updateInputWithCalculation = (expression: string) => {
+    console.log('Updating input with expression:', expression);
+    console.log('Current activeInput:', activeInput);
+    
+    // Update the active input field with the calculation expression in real-time
+    if (activeInput === 'dilam') {
+      console.log('Setting dilamAmount to:', expression);
+      setDilamAmount(expression);
+    } else if (activeInput === 'pelam') {
+      console.log('Setting pelamAmount to:', expression);
+      setPelamAmount(expression);
     } else {
-      // Prevent leading zeros for multi-digit numbers
-      if (calculatorValue === '0' && digit !== '0') {
-        setCalculatorValue(digit);
-      } else if (calculatorValue !== '0' || digit !== '0') {
-        setCalculatorValue(calculatorValue + digit);
+      console.log('No active input field');
+    }
+  };
+
+  const inputDigit = (digit: string) => {
+    let newExpression = calculationExpression;
+    
+    // If expression is empty or just "0", start fresh
+    if (newExpression === '' || newExpression === '0') {
+      newExpression = digit;
+    } else {
+      // Check if last character is an operator
+      const lastChar = newExpression.slice(-1);
+      if (['+', '-', '×', '÷'].includes(lastChar)) {
+        // If last character is operator, add digit after it
+        newExpression = newExpression + digit;
+      } else {
+        // If last character is a number, append digit
+        newExpression = newExpression + digit;
       }
     }
+    
+    setCalculationExpression(newExpression);
+    updateInputWithCalculation(newExpression);
   };
 
   const inputDecimal = () => {
-    if (waitingForOperand) {
-      setCalculatorValue('0.');
-      setWaitingForOperand(false);
-    } else if (calculatorValue.indexOf('.') === -1) {
-      setCalculatorValue(calculatorValue + '.');
+    let newExpression = calculationExpression;
+    
+    // If expression is empty, start with "0."
+    if (newExpression === '' || newExpression === '0') {
+      newExpression = '0.';
+    } else {
+      // Check if last character is an operator
+      const lastChar = newExpression.slice(-1);
+      if (['+', '-', '×', '÷'].includes(lastChar)) {
+        // If last character is operator, add "0."
+        newExpression = newExpression + '0.';
+      } else {
+        // Find the last number in the expression
+        const parts = newExpression.split(/[+\-×÷]/);
+        const lastNumber = parts[parts.length - 1];
+        
+        // Only add decimal if the last number doesn't already have one
+        if (lastNumber.indexOf('.') === -1) {
+          newExpression = newExpression + '.';
+        }
+      }
     }
+    
+    setCalculationExpression(newExpression);
+    updateInputWithCalculation(newExpression);
   };
 
   const clearAll = () => {
-    setCalculatorValue('0');
-    setPreviousValue(null);
-    setOperation(null);
-    setWaitingForOperand(false);
+    setCalculationExpression('');
+    
+    // Clear the active input field completely
+    if (activeInput === 'dilam') {
+      setDilamAmount('0');
+    } else if (activeInput === 'pelam') {
+      setPelamAmount('0');
+    }
   };
 
-  const clearEntry = () => {
-    setCalculatorValue('0');
+  const backspace = () => {
+    let newExpression = calculationExpression;
+    
+    if (newExpression.length > 0) {
+      newExpression = newExpression.slice(0, -1);
+      
+      // If expression becomes empty, set to "0"
+      if (newExpression === '') {
+        newExpression = '0';
+      }
+      
+      setCalculationExpression(newExpression);
+      updateInputWithCalculation(newExpression);
+    }
   };
 
   const performOperation = (nextOperation: string) => {
-    const inputValue = parseFloat(calculatorValue);
+    let newExpression = calculationExpression;
     
-    // Validate input
-    if (isNaN(inputValue)) {
-      Alert.alert('ত্রুটি', 'অবৈধ সংখ্যা');
-      return;
+    // Check if expression is empty or ends with an operator
+    if (newExpression === '' || newExpression === '0') {
+      return; // Don't add operator if no number
     }
-
-    if (previousValue === null) {
-      setPreviousValue(inputValue);
-    } else if (operation) {
-      const currentValue = previousValue || 0;
-      let newValue: number;
-
-      switch (operation) {
-        case '+':
-          newValue = currentValue + inputValue;
-          break;
-        case '-':
-          newValue = currentValue - inputValue;
-          break;
-        case '×':
-          newValue = currentValue * inputValue;
-          break;
-        case '÷':
-          if (inputValue === 0) {
-            Alert.alert('ত্রুটি', 'শূন্য দিয়ে ভাগ করা যাবে না');
-            return;
-          }
-          newValue = currentValue / inputValue;
-          break;
-        default:
-          newValue = inputValue;
-      }
-
-      // Handle very large or small numbers
-      if (Math.abs(newValue) > 1e15) {
-        Alert.alert('ত্রুটি', 'সংখ্যাটি খুব বড়');
-        return;
-      }
-
-      setCalculatorValue(String(newValue));
-      setPreviousValue(newValue);
+    
+    const lastChar = newExpression.slice(-1);
+    
+    // If last character is already an operator, replace it
+    if (['+', '-', '×', '÷'].includes(lastChar)) {
+      newExpression = newExpression.slice(0, -1) + nextOperation;
+    } else {
+      // Add operator after the number
+      newExpression = newExpression + nextOperation;
     }
-
-    setWaitingForOperand(true);
-    setOperation(nextOperation);
+    
+    setCalculationExpression(newExpression);
+    updateInputWithCalculation(newExpression);
   };
 
   const calculateResult = () => {
-    if (!previousValue || !operation) return;
-
-    const inputValue = parseFloat(calculatorValue);
-    
-    // Validate input
-    if (isNaN(inputValue)) {
-      Alert.alert('ত্রুটি', 'অবৈধ সংখ্যা');
+    if (calculationExpression === '' || calculationExpression === '0') {
       return;
     }
     
-    let newValue: number;
-
-    switch (operation) {
-      case '+':
-        newValue = previousValue + inputValue;
-        break;
-      case '-':
-        newValue = previousValue - inputValue;
-        break;
-      case '×':
-        newValue = previousValue * inputValue;
-        break;
-      case '÷':
-        if (inputValue === 0) {
-          Alert.alert('ত্রুটি', 'শূন্য দিয়ে ভাগ করা যাবে না');
-          return;
-        }
-        newValue = previousValue / inputValue;
-        break;
-      default:
-        newValue = inputValue;
-    }
-
-    // Handle very large or small numbers
-    if (Math.abs(newValue) > 1e15) {
-      Alert.alert('ত্রুটি', 'সংখ্যাটি খুব বড়');
+    // Check if expression ends with an operator
+    const lastChar = calculationExpression.slice(-1);
+    if (['+', '-', '×', '÷'].includes(lastChar)) {
+      Alert.alert('ত্রুটি', 'অসম্পূর্ণ অভিব্যক্তি। শেষে একটি সংখ্যা দিন।');
       return;
     }
-
-    setCalculatorValue(String(newValue));
-    setPreviousValue(null);
-    setOperation(null);
-    setWaitingForOperand(false);
+    
+    try {
+      // Replace × with * and ÷ with / for evaluation
+      let expressionToEvaluate = calculationExpression
+        .replace(/×/g, '*')
+        .replace(/÷/g, '/');
+      
+      // Evaluate the expression
+      const result = eval(expressionToEvaluate);
+      
+      // Validate result
+      if (!isFinite(result)) {
+        Alert.alert('ত্রুটি', 'অবৈধ গণনা');
+        return;
+      }
+      
+      if (Math.abs(result) > 1e15) {
+        Alert.alert('ত্রুটি', 'সংখ্যাটি খুব বড়');
+        return;
+      }
+      
+      // Format result
+      const formattedResult = result % 1 === 0 ? result.toString() : result.toFixed(2);
+      
+      setCalculationExpression(formattedResult);
+      updateInputWithCalculation(formattedResult);
+      
+    } catch (error) {
+      Alert.alert('ত্রুটি', 'গণনা করতে ব্যর্থ');
+    }
   };
 
   const percentage = () => {
-    const currentValue = parseFloat(calculatorValue);
-    if (isNaN(currentValue)) {
-      setCalculatorValue('0');
+    if (calculationExpression === '' || calculationExpression === '0') {
       return;
     }
-    const newValue = currentValue / 100;
     
-    // Handle very small numbers
-    if (Math.abs(newValue) < 1e-10) {
-      setCalculatorValue('0');
-    } else {
-      setCalculatorValue(String(newValue));
+    // Check if expression ends with an operator
+    const lastChar = calculationExpression.slice(-1);
+    if (['+', '-', '×', '÷'].includes(lastChar)) {
+      return; // Don't calculate percentage if expression ends with operator
+    }
+    
+    try {
+      // Replace × with * and ÷ with / for evaluation
+      let expressionToEvaluate = calculationExpression
+        .replace(/×/g, '*')
+        .replace(/÷/g, '/');
+      
+      // Evaluate the expression
+      const result = eval(expressionToEvaluate);
+      
+      // Calculate percentage
+      const percentageResult = result / 100;
+      
+      // Format result
+      const formattedResult = percentageResult % 1 === 0 ? percentageResult.toString() : percentageResult.toFixed(2);
+      
+      setCalculationExpression(formattedResult);
+      updateInputWithCalculation(formattedResult);
+      
+    } catch (error) {
+      Alert.alert('ত্রুটি', 'শতকরা হার গণনা করতে ব্যর্থ');
     }
   };
 
   const handleInputFocus = (inputType: 'dilam' | 'pelam') => {
+    console.log('Input focus triggered for:', inputType);
+    console.log('Current activeInput:', activeInput);
+    
+    // Always switch to the clicked input field
     setActiveInput(inputType);
     setShowCalculator(true);
-    setCalculatorValue('0');
-    setPreviousValue(null);
-    setOperation(null);
-    setWaitingForOperand(false);
-  };
-
-  const applyCalculatorResult = () => {
-    if (activeInput === 'dilam') {
-      setDilamAmount(calculatorValue);
-    } else if (activeInput === 'pelam') {
-      setPelamAmount(calculatorValue);
-    }
-    setShowCalculator(false);
-    setActiveInput(null);
-  };
-
-  const backspace = () => {
-    if (calculatorValue.length > 1) {
-      setCalculatorValue(calculatorValue.slice(0, -1));
-    } else {
-      setCalculatorValue('0');
-    }
-  };
-
-  const getCalculatorTitle = () => {
-    if (activeInput === 'dilam') {
-      return 'দিলাম/বেচা - ক্যালকুলেটর (আপনি দিয়েছেন)';
-    } else if (activeInput === 'pelam') {
-      return 'পেলাম - ক্যালকুলেটর (আপনি পেয়েছেন)';
-    }
-    return 'ক্যালকুলেটর';
-  };
-
-  const formatDisplayValue = (value: string) => {
-    const num = parseFloat(value);
-    if (isNaN(num)) return '0';
     
-    // Format large numbers
-    if (Math.abs(num) >= 1e6) {
-      return num.toExponential(2);
+    // Initialize calculator with current input value
+    let currentValue = '0';
+    if (inputType === 'dilam') {
+      currentValue = dilamAmount || '0';
+      console.log('Setting dilam value:', currentValue);
+    } else if (inputType === 'pelam') {
+      currentValue = pelamAmount || '0';
+      console.log('Setting pelam value:', currentValue);
     }
     
-    // Format with appropriate decimal places
-    if (value.includes('.')) {
-      return parseFloat(value).toFixed(Math.min(2, value.split('.')[1]?.length || 0));
-    }
-    
-    return value;
+    setCalculationExpression(currentValue);
+    console.log('Calculator expression set to:', currentValue);
   };
+
+
+
+
+
+
 
   // Dropdown Menu Functions
   const handleViewUserDetails = () => {
     setShowDropdown(false);
     // Navigate to user details page or show modal
-    Alert.alert('ব্যবহারকারীর বিবরণ', `নাম: ${customer?.name}\nফোন: ${customer?.phone}\nধরন: ${customer?.type}`);
+    Alert.alert(
+      'ব্যবহারকারীর বিবরণ',
+      `নাম: ${customer?.name}\nফোন: ${customer?.phone}\nধরন: ${customer?.type}`
+    );
   };
 
   const handleViewUserReports = () => {
@@ -278,41 +301,39 @@ export default function CustomerTransactionScreen() {
 
   const handleDeleteUser = () => {
     setShowDropdown(false);
-    Alert.alert(
-      'ব্যবহারকারী মুছুন',
-      `আপনি কি নিশ্চিত যে আপনি ${customer?.name} কে মুছতে চান?`,
-      [
-        { text: 'না', style: 'cancel' },
-        { 
-          text: 'হ্যাঁ, মুছুন', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteCustomer(Number(id));
-              Alert.alert('সফল', 'ব্যবহারকারী মুছে ফেলা হয়েছে', [
-                { text: 'ঠিক আছে', onPress: () => router.push('/customers-list') }
-              ]);
-            } catch (error) {
-              Alert.alert('ত্রুটি', 'ব্যবহারকারী মুছতে ব্যর্থ');
-            }
+    Alert.alert('ব্যবহারকারী মুছুন', `আপনি কি নিশ্চিত যে আপনি ${customer?.name} কে মুছতে চান?`, [
+      { text: 'না', style: 'cancel' },
+      {
+        text: 'হ্যাঁ, মুছুন',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteCustomer(Number(id));
+            Alert.alert('সফল', 'ব্যবহারকারী মুছে ফেলা হয়েছে', [
+              { text: 'ঠিক আছে', onPress: () => router.push('/customers-list') },
+            ]);
+          } catch (error) {
+            Alert.alert('ত্রুটি', 'ব্যবহারকারী মুছতে ব্যর্থ');
           }
-        }
-      ]
-    );
+        },
+      },
+    ]);
   };
 
   const handleSubmit = async () => {
     if (submitting) return;
 
     // Validate that at least one amount is provided
-    if ((!dilamAmount || parseFloat(dilamAmount) <= 0) && 
-        (!pelamAmount || parseFloat(pelamAmount) <= 0)) {
+    if (
+      (!dilamAmount || parseFloat(dilamAmount) <= 0) &&
+      (!pelamAmount || parseFloat(pelamAmount) <= 0)
+    ) {
       Alert.alert('ত্রুটি', 'অন্তত একটি পরিমাণ (দিলাম বা পেলাম) দিতে হবে');
       return;
     }
 
     setSubmitting(true);
-    
+
     try {
       // Add dilam transaction (credit - you gave money, so you will receive)
       if (dilamAmount && parseFloat(dilamAmount) > 0) {
@@ -351,28 +372,19 @@ export default function CustomerTransactionScreen() {
         message.push(`পেলাম: ${pelamAmount}৳`);
       }
 
-      Alert.alert(
-        'সফল',
-        `লেনদেন যোগ করা হয়েছে:\n${message.join('\n')}`,
-        [
-          {
-            text: 'ঠিক আছে',
-            onPress: () => {
-              // Reset form
-              setDilamAmount('');
-              setPelamAmount('');
-              setNote('');
-              setShowCalculator(false);
-              setActiveInput(null);
-              setCalculatorValue('0');
-              setPreviousValue(null);
-              setOperation(null);
-              setWaitingForOperand(false);
-            }
-          }
-        ]
-      );
-
+      Alert.alert('সফল', `লেনদেন যোগ করা হয়েছে:\n${message.join('\n')}`, [
+        {
+          text: 'ঠিক আছে',
+          onPress: () => {
+            // Reset form
+            setDilamAmount('');
+            setPelamAmount('');
+            setNote('');
+            setShowCalculator(false);
+            setActiveInput(null);
+          },
+        },
+      ]);
     } catch (error) {
       console.error('Error adding transaction:', error);
       Alert.alert('ত্রুটি', 'লেনদেন যোগ করতে ব্যর্থ');
@@ -384,17 +396,10 @@ export default function CustomerTransactionScreen() {
   const renderHeader = () => (
     <View style={[styles.header, { backgroundColor: colors.primary }]}>
       {/* First: Back Button */}
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={handleBackPress}
-        activeOpacity={0.7}>
-        <IconButton
-          icon="arrow-left"
-          size={24}
-          iconColor={colors.textInverse}
-        />
+      <TouchableOpacity style={styles.backButton} onPress={handleBackPress} activeOpacity={0.7}>
+        <IconButton icon="arrow-left" size={24} iconColor={colors.textInverse} />
       </TouchableOpacity>
-      
+
       {/* Second: User Avatar */}
       <View style={styles.avatarContainer}>
         <View style={[styles.userAvatar, { backgroundColor: colors.secondary }]}>
@@ -403,13 +408,13 @@ export default function CustomerTransactionScreen() {
           </Text>
         </View>
       </View>
-      
+
       {/* Third: User Name */}
       <View style={styles.userInfoContainer}>
         <Text style={[styles.userName, { color: colors.textInverse }]}>
           {customer?.name || 'গ্রাহক'}
         </Text>
-        
+
         {/* Fourth: User Mobile Number */}
         <Text style={[styles.userMobile, { color: colors.textInverse }]}>
           {customer?.phone || 'ফোন নম্বর নেই'}
@@ -420,181 +425,81 @@ export default function CustomerTransactionScreen() {
       <TouchableOpacity
         style={styles.dropdownButton}
         onPress={() => setShowDropdown(!showDropdown)}
-        activeOpacity={0.7}>
-        <IconButton
-          icon="dots-vertical"
-          size={24}
-          iconColor={colors.textInverse}
-        />
+        activeOpacity={0.5}>
+        <IconButton icon="dots-vertical" size={24} iconColor={colors.textInverse} />
       </TouchableOpacity>
     </View>
   );
 
   const renderTransactionForm = () => (
     <View style={[styles.formContainer, { backgroundColor: colors.surface }]}>
-      {/* Instructions */}
-      <View style={styles.instructionsContainer}>
-        <Text style={[styles.instructionsTitle, { color: colors.text }]}>
-          কিভাবে লেনদেন করবেন?
-        </Text>
-        <Text style={[styles.instructionsText, { color: colors.textSecondary }]}>
-          আপনি শুধু দিলাম, শুধু পেলাম, অথবা দুটোই করতে পারেন। অন্তত একটি পরিমাণ দিতে হবে।
-        </Text>
-      </View>
 
-      {/* Input Fields */}
-      <View style={styles.inputContainer}>
-        <Text style={[styles.inputLabel, { color: colors.text }]}>
-          দিলাম/বেচা (আপনি দিয়েছেন) *
-        </Text>
-        <Text style={[styles.inputSubLabel, { color: colors.textSecondary }]}>
-          আপনি যে পণ্য বিক্রি করেছেন (ঐচ্ছিক)
-        </Text>
-        <View style={styles.inputWithCalculator}>
-          <TextInput
-            style={[styles.inputField, { 
-              backgroundColor: colors.surface,
-              color: colors.text,
-              borderColor: colors.border,
-              flex: 1
-            }]}
-            placeholder="টাকার পরিমাণ লিখুন"
-            placeholderTextColor={colors.textSecondary}
-            value={dilamAmount}
-            onChangeText={setDilamAmount}
-            keyboardType="numeric"
-            editable={!submitting}
-          />
-          <TouchableOpacity
-            style={styles.calculatorButton}
-            onPress={() => {
-              setActiveInput('dilam');
-              setShowCalculator(true);
-            }}
-            activeOpacity={0.7}>
-            <IconButton icon="calculator" size={20} iconColor={colors.primary} />
-          </TouchableOpacity>
+
+      {/* First Row - Two Columns */}
+      <View style={styles.inputRow}>
+        <View style={styles.inputColumn}>
+          {/* <Text style={[styles.inputLabel, { color: colors.text }]}>দিলাম / বেচা</Text> */}
+                      <TextInput
+              mode="outlined"
+              label='দিলাম / বেচা'
+              value={dilamAmount}
+              onChangeText={setDilamAmount}
+              keyboardType="numeric"
+              disabled={submitting}
+              onFocus={() => handleInputFocus('dilam')}
+              showSoftInputOnFocus={false}
+              editable={true}
+            />
+        </View>
+
+        <View style={styles.inputColumn}>
+          {/* <Text style={[styles.inputLabel, { color: colors.text }]}>পেলাম</Text> */}
+                      <TextInput
+              mode="outlined"
+              label="পেলাম"
+              value={pelamAmount}
+              onChangeText={setPelamAmount}
+              keyboardType="numeric"
+              disabled={submitting}
+              onFocus={() => handleInputFocus('pelam')}
+              showSoftInputOnFocus={false}
+              editable={true}
+            />
         </View>
       </View>
 
+      {/* Second Row - One Column */}
       <View style={styles.inputContainer}>
-        <Text style={[styles.inputLabel, { color: colors.text }]}>
-          পেলাম (আপনি পেয়েছেন) *
-        </Text>
-        <Text style={[styles.inputSubLabel, { color: colors.textSecondary }]}>
-          আপনি যে পণ্যের মূল্য পেয়েছেন (ঐচ্ছিক)
-        </Text>
-        <View style={styles.inputWithCalculator}>
-          <TextInput
-            style={[styles.inputField, { 
-              backgroundColor: colors.surface,
-              color: colors.text,
-              borderColor: colors.border,
-              flex: 1
-            }]}
-            placeholder="টাকার পরিমাণ লিখুন"
-            placeholderTextColor={colors.textSecondary}
-            value={pelamAmount}
-            onChangeText={setPelamAmount}
-            keyboardType="numeric"
-            editable={!submitting}
-          />
-          <TouchableOpacity
-            style={styles.calculatorButton}
-            onPress={() => {
-              setActiveInput('pelam');
-              setShowCalculator(true);
-            }}
-            activeOpacity={0.7}>
-            <IconButton icon="calculator" size={20} iconColor={colors.primary} />
-          </TouchableOpacity>
-        </View>
-      </View>
-      
-      {/* Note Input */}
-      <View style={styles.inputContainer}>
-        <Text style={[styles.inputLabel, { color: colors.text }]}>
-          নোট (ঐচ্ছিক)
-        </Text>
+        {/* <Text style={[styles.inputLabel, { color: colors.text }]}>বিবরণ</Text> */}
         <TextInput
-          style={[styles.textInput, { 
-            backgroundColor: colors.surfaceSecondary,
-            color: colors.text,
-            borderColor: colors.border
-          }]}
+          mode="outlined"
+          label="বিবরণ"
           value={note}
           onChangeText={setNote}
-          placeholder="লেনদেনের নোট দিন"
-          placeholderTextColor={colors.textSecondary}
           multiline
-          numberOfLines={3}
+          numberOfLines={4}
+          disabled={submitting}
+          onFocus={() => {
+            if (showCalculator) {
+              setShowCalculator(false);
+              setActiveInput(null);
+            }
+          }}
         />
       </View>
 
-      {/* Transaction Summary */}
-      {(dilamAmount || pelamAmount) && (
-        <View style={styles.summaryContainer}>
-          <Text style={[styles.summaryTitle, { color: colors.text }]}>
-            লেনদেনের সারসংক্ষেপ
-          </Text>
-          <View style={styles.summaryContent}>
-            {dilamAmount && parseFloat(dilamAmount) > 0 && (
-              <View style={styles.summaryItem}>
-                <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
-                  দিলাম (আপনি দিয়েছেন):
-                </Text>
-                <Text style={[styles.summaryValue, { color: colors.success }]}>
-                  {dilamAmount}৳
-                </Text>
-              </View>
-            )}
-            {pelamAmount && parseFloat(pelamAmount) > 0 && (
-              <View style={styles.summaryItem}>
-                <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
-                  পেলাম (আপনি পেয়েছেন):
-                </Text>
-                <Text style={[styles.summaryValue, { color: colors.error }]}>
-                  {pelamAmount}৳
-                </Text>
-              </View>
-            )}
-            {note && (
-              <View style={styles.summaryItem}>
-                <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
-                  নোট:
-                </Text>
-                <Text style={[styles.summaryValue, { color: colors.text }]}>
-                  {note}
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
-      )}
-      
+
+
       {/* Submit Button */}
       <View style={styles.buttonRow}>
         <TouchableOpacity
-          style={[styles.clearButton, { 
-            backgroundColor: colors.surfaceSecondary,
-            borderColor: colors.border
-          }]}
-          onPress={() => {
-            setDilamAmount('');
-            setPelamAmount('');
-            setNote('');
-          }}
-          activeOpacity={0.8}>
-          <Text style={[styles.clearButtonText, { color: colors.text }]}>
-            পরিষ্কার করুন
-          </Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[styles.submitButton, { 
-            backgroundColor: colors.primary,
-            opacity: submitting ? 0.7 : 1
-          }]}
+          style={[
+            styles.submitButton,
+            {
+              backgroundColor: colors.primary,
+              opacity: submitting ? 0.7 : 1,
+            },
+          ]}
           onPress={handleSubmit}
           disabled={submitting}
           activeOpacity={0.8}>
@@ -609,9 +514,7 @@ export default function CustomerTransactionScreen() {
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Text style={[styles.loadingText, { color: colors.text }]}>
-          লোড হচ্ছে...
-        </Text>
+        <Text style={[styles.loadingText, { color: colors.text }]}>লোড হচ্ছে...</Text>
       </View>
     );
   }
@@ -620,201 +523,208 @@ export default function CustomerTransactionScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {renderHeader()}
       {renderTransactionForm()}
-      
-      {/* Calculator Keyboard - Footer Position */}
+
+                {/* Calculator Keyboard - Footer Position */}
       {showCalculator && (
         <View style={styles.calculatorFooter}>
-          <View style={[styles.calculatorContainer, { backgroundColor: colors.surface }]}>
-            <View style={styles.calculatorDisplay}>
-              <Text style={[styles.calculatorValue, { color: colors.text }]}>
-                {formatDisplayValue(calculatorValue)}
-              </Text>
-              {operation && previousValue !== null && (
-                <Text style={[styles.calculatorOperation, { color: colors.textSecondary }]}>
-                  {formatDisplayValue(String(previousValue))} {operation}
-                </Text>
-              )}
-              {!operation && !waitingForOperand && (
-                <Text style={[styles.calculatorOperation, { color: colors.textSecondary }]}>
-                  {getCalculatorTitle().split(' - ')[0]}
-                </Text>
-              )}
-            </View>
-            
+          <View style={[styles.calculatorContainer]}>
             <View style={styles.calculatorButtons}>
-              {/* Calculator Header with Close Button */}
-              <View style={styles.calculatorHeader}>
-                <Text style={[styles.calculatorTitle, { color: colors.text }]}>
-                  {getCalculatorTitle()}
-                </Text>
-                <TouchableOpacity
-                  style={styles.closeButton}
-                  onPress={() => setShowCalculator(false)}>
-                  <Text style={[styles.closeButtonText, { color: colors.text }]}>✕</Text>
-                </TouchableOpacity>
-              </View>
               {/* First Row */}
               <View style={styles.calculatorRow}>
                 <TouchableOpacity
-                  style={[styles.calcButton, { backgroundColor: colors.error }]}
+                  style={[styles.calcButton, { backgroundColor: '#FFF' }]}
+                  onPress={clearAll}
+                  activeOpacity={0.3}>
+                  <Text style={[styles.calcButtonText, { color: '#000' }]}>AC</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.calcButton, { backgroundColor: '#FFF' }]}
                   onPress={clearAll}
                   activeOpacity={0.7}>
-                  <Text style={[styles.calcButtonText, { color: colors.textInverse }]}>AC</Text>
+                  <Text style={[styles.calcButtonText, { color: '#000' }]}>C</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.calcButton, { backgroundColor: colors.warning }]}
-                  onPress={clearEntry}
-                  activeOpacity={0.7}>
-                  <Text style={[styles.calcButtonText, { color: colors.textInverse }]}>C</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.calcButton, { backgroundColor: colors.warning }]}
+                  style={[styles.calcButton, { backgroundColor: '#FFF' }]}
                   onPress={percentage}
                   activeOpacity={0.7}>
-                  <Text style={[styles.calcButtonText, { color: colors.textInverse }]}>%</Text>
+                  <Text style={[styles.calcButtonText, { color: '#000' }]}>%</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.calcButton, { 
-                    backgroundColor: operation === '÷' ? colors.primary : colors.secondary 
-                  }]}
+                  style={[
+                    styles.calcButton,
+                    {
+                      backgroundColor: '#FFF',
+                      elevation: 8,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 4,
+                    },
+                  ]}
                   onPress={() => performOperation('÷')}
                   activeOpacity={0.7}>
-                  <Text style={[styles.calcButtonText, { color: colors.textInverse }]}>÷</Text>
+                  <Text style={[styles.calcButtonText, { color: '#000' }]}>÷</Text>
                 </TouchableOpacity>
               </View>
 
               {/* Second Row */}
               <View style={styles.calculatorRow}>
                 <TouchableOpacity
-                  style={[styles.calcButton, { backgroundColor: colors.surfaceSecondary }]}
+                  style={[styles.calcButton, { backgroundColor: '#FFF' }]}
                   onPress={() => inputDigit('7')}
                   activeOpacity={0.7}>
-                  <Text style={[styles.calcButtonText, { color: colors.text }]}>7</Text>
+                  <Text style={[styles.calcButtonText, { color: '#000' }]}>7</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.calcButton, { backgroundColor: colors.surfaceSecondary }]}
+                  style={[styles.calcButton, { backgroundColor: '#FFF' }]}
                   onPress={() => inputDigit('8')}
                   activeOpacity={0.7}>
-                  <Text style={[styles.calcButtonText, { color: colors.text }]}>8</Text>
+                  <Text style={[styles.calcButtonText, { color: '#000' }]}>8</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.calcButton, { backgroundColor: colors.surfaceSecondary }]}
+                  style={[styles.calcButton, { backgroundColor: '#FFF' }]}
                   onPress={() => inputDigit('9')}
                   activeOpacity={0.7}>
-                  <Text style={[styles.calcButtonText, { color: colors.text }]}>9</Text>
+                  <Text style={[styles.calcButtonText, { color: '#000' }]}>9</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.calcButton, { 
-                    backgroundColor: operation === '×' ? colors.primary : colors.secondary 
-                  }]}
+                  style={[
+                    styles.calcButton,
+                    {
+                      backgroundColor: '#FFF',
+                      elevation: 8,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 4,
+                    },
+                  ]}
                   onPress={() => performOperation('×')}
                   activeOpacity={0.7}>
-                  <Text style={[styles.calcButtonText, { color: colors.textInverse }]}>×</Text>
+                  <Text style={[styles.calcButtonText, { color: '#000' }]}>×</Text>
                 </TouchableOpacity>
               </View>
 
               {/* Third Row */}
               <View style={styles.calculatorRow}>
                 <TouchableOpacity
-                  style={[styles.calcButton, { backgroundColor: colors.surfaceSecondary }]}
+                  style={[styles.calcButton, { backgroundColor: '#FFF' }]}
                   onPress={() => inputDigit('4')}
                   activeOpacity={0.7}>
-                  <Text style={[styles.calcButtonText, { color: colors.text }]}>4</Text>
+                  <Text style={[styles.calcButtonText, { color: '#000' }]}>4</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.calcButton, { backgroundColor: colors.surfaceSecondary }]}
+                  style={[styles.calcButton, { backgroundColor: '#FFF' }]}
                   onPress={() => inputDigit('5')}
                   activeOpacity={0.7}>
-                  <Text style={[styles.calcButtonText, { color: colors.text }]}>5</Text>
+                  <Text style={[styles.calcButtonText, { color: '#000' }]}>5</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.calcButton, { backgroundColor: colors.surfaceSecondary }]}
+                  style={[styles.calcButton, { backgroundColor: '#FFF' }]}
                   onPress={() => inputDigit('6')}
                   activeOpacity={0.7}>
-                  <Text style={[styles.calcButtonText, { color: colors.text }]}>6</Text>
+                  <Text style={[styles.calcButtonText, { color: '#000' }]}>6</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.calcButton, { 
-                    backgroundColor: operation === '+' ? colors.primary : colors.secondary 
-                  }]}
+                  style={[
+                    styles.calcButton,
+                    {
+                      backgroundColor: '#FFF',
+                      elevation: 8,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 4,
+                    },
+                  ]}
                   onPress={() => performOperation('+')}
                   activeOpacity={0.7}>
-                  <Text style={[styles.calcButtonText, { color: colors.textInverse }]}>+</Text>
+                  <Text style={[styles.calcButtonText, { color: '#000' }]}>+</Text>
                 </TouchableOpacity>
               </View>
 
               {/* Fourth Row */}
               <View style={styles.calculatorRow}>
                 <TouchableOpacity
-                  style={[styles.calcButton, { backgroundColor: colors.surfaceSecondary }]}
+                  style={[styles.calcButton, { backgroundColor: '#FFF' }]}
                   onPress={() => inputDigit('1')}
                   activeOpacity={0.7}>
-                  <Text style={[styles.calcButtonText, { color: colors.text }]}>1</Text>
+                  <Text style={[styles.calcButtonText, { color: '#000' }]}>1</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.calcButton, { backgroundColor: colors.surfaceSecondary }]}
+                  style={[styles.calcButton, { backgroundColor: '#FFF' }]}
                   onPress={() => inputDigit('2')}
                   activeOpacity={0.7}>
-                  <Text style={[styles.calcButtonText, { color: colors.text }]}>2</Text>
+                  <Text style={[styles.calcButtonText, { color: '#000' }]}>2</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.calcButton, { backgroundColor: colors.surfaceSecondary }]}
+                  style={[styles.calcButton, { backgroundColor: '#FFF' }]}
                   onPress={() => inputDigit('3')}
                   activeOpacity={0.7}>
-                  <Text style={[styles.calcButtonText, { color: colors.text }]}>3</Text>
+                  <Text style={[styles.calcButtonText, { color: '#000' }]}>3</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.calcButton, { 
-                    backgroundColor: operation === '-' ? colors.primary : colors.secondary 
-                  }]}
+                  style={[
+                    styles.calcButton,
+                    {
+                      backgroundColor: '#FFF',
+                      elevation: 8,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 4,
+                    },
+                  ]}
                   onPress={() => performOperation('-')}
                   activeOpacity={0.7}>
-                  <Text style={[styles.calcButtonText, { color: colors.textInverse }]}>-</Text>
+                  <Text style={[styles.calcButtonText, { color: '#000' }]}>-</Text>
                 </TouchableOpacity>
               </View>
 
               {/* Fifth Row */}
               <View style={styles.calculatorRow}>
                 <TouchableOpacity
-                  style={[styles.calcButton, { backgroundColor: colors.surfaceSecondary }]}
+                  style={[styles.calcButton, { backgroundColor: '#FFF' }]}
                   onPress={() => inputDigit('0')}
                   activeOpacity={0.7}>
-                  <Text style={[styles.calcButtonText, { color: colors.text }]}>0</Text>
+                  <Text style={[styles.calcButtonText, { color: '#000' }]}>0</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.calcButton, { backgroundColor: colors.surfaceSecondary }]}
+                  style={[styles.calcButton, { backgroundColor: '#FFF' }]}
                   onPress={inputDecimal}
                   activeOpacity={0.7}>
-                  <Text style={[styles.calcButtonText, { color: colors.text }]}>.</Text>
+                  <Text style={[styles.calcButtonText, { color: '#000' }]}>.</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.calcButton, { backgroundColor: colors.surfaceSecondary }]}
+                  style={[styles.calcButton, { backgroundColor: '#FFF' }]}
                   onPress={backspace}
                   activeOpacity={0.7}>
-                  <Text style={[styles.calcButtonText, { color: colors.text }]}>⌫</Text>
+                  <Text style={[styles.calcButtonText, { color: '#000' }]}>⌫</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.calcButton, { backgroundColor: colors.primary }]}
+                  style={[
+                    styles.calcButton,
+                    {
+                      backgroundColor: '#FFF',
+                      elevation: 8,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 4,
+                    },
+                  ]}
                   onPress={calculateResult}
                   activeOpacity={0.7}>
-                  <Text style={[styles.calcButtonText, { color: colors.textInverse }]}>=</Text>
+                  <Text style={[styles.calcButtonText, { color: '#000' }]}>=</Text>
                 </TouchableOpacity>
               </View>
+              
 
-              {/* Sixth Row - Apply Result Button */}
-              <View style={styles.calculatorRow}>
-                <TouchableOpacity
-                  style={[styles.applyButton, { backgroundColor: colors.success }]}
-                  onPress={applyCalculatorResult}
-                  activeOpacity={0.7}>
-                  <Text style={[styles.calcButtonText, { color: colors.textInverse }]}>✓ প্রয়োগ করুন</Text>
-                </TouchableOpacity>
-              </View>
             </View>
           </View>
         </View>
       )}
-      
+
       {/* Dropdown Menu Modal */}
       <Modal
         visible={showDropdown}
@@ -828,58 +738,42 @@ export default function CustomerTransactionScreen() {
           <View style={[styles.dropdownMenu, { backgroundColor: colors.surface }]}>
             {/* Dropdown Header */}
             <View style={[styles.dropdownHeader, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.dropdownTitle, { color: colors.text }]}>
-                ব্যবহারকারী অপশন
-              </Text>
+              <Text style={[styles.dropdownTitle, { color: colors.text }]}>ব্যবহারকারী অপশন</Text>
               <TouchableOpacity
                 style={styles.dropdownCloseButton}
                 onPress={() => setShowDropdown(false)}>
                 <Text style={[styles.dropdownCloseText, { color: colors.textSecondary }]}>✕</Text>
               </TouchableOpacity>
             </View>
-            
+
             <TouchableOpacity
               style={[styles.dropdownItem, { borderBottomColor: colors.border }]}
               onPress={handleViewUserDetails}
               activeOpacity={0.7}>
-              <IconButton
-                icon="account-details"
-                size={20}
-                iconColor={colors.primary}
-              />
+              <IconButton icon="account-details" size={20} iconColor={colors.primary} />
               <Text style={[styles.dropdownItemText, { color: colors.text }]}>
                 ব্যবহারকারীর বিবরণ
               </Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={[styles.dropdownItem, { borderBottomColor: colors.border }]}
               onPress={handleViewUserReports}
               activeOpacity={0.7}>
-              <IconButton
-                icon="chart-line"
-                size={20}
-                iconColor={colors.info}
-              />
+              <IconButton icon="chart-line" size={20} iconColor={colors.info} />
               <Text style={[styles.dropdownItemText, { color: colors.text }]}>
                 ব্যবহারকারীর রিপোর্ট
               </Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={[styles.dropdownItem, { borderBottomColor: colors.border }]}
               onPress={handleUpdateUser}
               activeOpacity={0.7}>
-              <IconButton
-                icon="pencil"
-                size={20}
-                iconColor={colors.warning}
-              />
-              <Text style={[styles.dropdownItemText, { color: colors.text }]}>
-                আপডেট করুন
-              </Text>
+              <IconButton icon="pencil" size={20} iconColor={colors.warning} />
+              <Text style={[styles.dropdownItemText, { color: colors.text }]}>আপডেট করুন</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={[styles.dropdownItem, { borderBottomColor: colors.border }]}
               onPress={() => {
@@ -887,28 +781,16 @@ export default function CustomerTransactionScreen() {
                 router.push(`/customer-upgrade/${id}`);
               }}
               activeOpacity={0.7}>
-              <IconButton
-                icon="star"
-                size={20}
-                iconColor={colors.accent}
-              />
-              <Text style={[styles.dropdownItemText, { color: colors.text }]}>
-                আপগ্রেড করুন
-              </Text>
+              <IconButton icon="star" size={20} iconColor={colors.accent} />
+              <Text style={[styles.dropdownItemText, { color: colors.text }]}>আপগ্রেড করুন</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={[styles.dropdownItem]}
               onPress={handleDeleteUser}
               activeOpacity={0.7}>
-              <IconButton
-                icon="delete"
-                size={20}
-                iconColor={colors.error}
-              />
-              <Text style={[styles.dropdownItemText, { color: colors.error }]}>
-                মুছুন
-              </Text>
+              <IconButton icon="delete" size={20} iconColor={colors.error} />
+              <Text style={[styles.dropdownItemText, { color: colors.error }]}>মুছুন</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -925,9 +807,9 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
+    paddingHorizontal: 10,
     backgroundColor: '#2196F3',
   },
   backButton: {
@@ -978,6 +860,14 @@ const styles = StyleSheet.create({
   inputContainer: {
     marginBottom: 20,
   },
+  inputRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  inputColumn: {
+    flex: 1,
+  },
   inputLabel: {
     fontSize: 16,
     fontWeight: '600',
@@ -1000,16 +890,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     marginTop: 8,
   },
-  inputField: {
-    height: 50,
-    borderWidth: 0,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    textAlign: 'center',
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
+
   calculatorButton: {
     padding: 8,
   },
@@ -1022,36 +903,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
     borderColor: '#E0E0E0',
   },
-  submitButton: {
-    paddingVertical: 16,
-    borderRadius: 8,
+  buttonRow: {
     alignItems: 'center',
     marginTop: 20,
+  },
+  submitButton: {
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 8,
+    alignItems: 'center',
     elevation: 2,
   },
   submitButtonText: {
     fontSize: 18,
     fontWeight: '600',
   },
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-  },
-  clearButton: {
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: 10,
-  },
-  clearButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
+
   loadingText: {
     fontSize: 18,
     fontWeight: '600',
@@ -1163,14 +1030,19 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+    transform: [{ translateY: 0 }],
   },
   calculatorContainer: {
     margin: 0,
-    borderRadius: 16,
-    elevation: 4,
+    borderRadius: 0,
+    elevation: 8,
     overflow: 'hidden',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   calculatorDisplay: {
     padding: 20,
@@ -1189,43 +1061,34 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   calculatorButtons: {
-    padding: 16,
+    padding: 0,
   },
-  calculatorHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  calculatorTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  closeButton: {
-    padding: 8,
-  },
-  closeButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
+
   calculatorRow: {
     flexDirection: 'row',
-    marginBottom: 12,
-    gap: 12,
+    marginBottom: 0,
+    gap: 0,
   },
   calcButton: {
     flex: 1,
     height: 50,
-    borderRadius: 8,
+    borderRadius: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 2,
+    elevation: 0,
+    borderWidth: 0,
   },
   calcButtonText: {
     fontSize: 18,
     fontWeight: '600',
+  },
+  calcButtonPressed: {
+    backgroundColor: '#333333',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
   applyButton: {
     flex: 1,
@@ -1235,5 +1098,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     elevation: 2,
   },
-});
 
+});

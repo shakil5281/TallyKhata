@@ -8,13 +8,7 @@ import {
   ActivityIndicator as RNActivityIndicator,
   Text,
 } from 'react-native';
-import {
-  TextInput,
-  Button,
-  Avatar,
-  Switch,
-  IconButton,
-} from 'react-native-paper';
+import { TextInput, Button, Avatar, Switch, IconButton } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { ProfileUpdateInput, getUserProfile, updateUserProfile, getDashboardStats } from '~/lib/db';
 import { useToast } from '~/context/ToastContext';
@@ -95,7 +89,7 @@ export default function ProfileEditScreen() {
   };
 
   const handleSave = async () => {
-    if (!formData.name.trim()) {
+    if (!formData.name?.trim()) {
       Alert.alert('ত্রুটি', 'নাম প্রয়োজন');
       return;
     }
@@ -104,7 +98,7 @@ export default function ProfileEditScreen() {
       setSaving(true);
       await updateUserProfile(formData);
       showToast('প্রোফাইল সফলভাবে আপডেট হয়েছে!', 'success');
-      
+
       // Small delay to show toast
       setTimeout(() => {
         router.back();
@@ -123,17 +117,10 @@ export default function ProfileEditScreen() {
 
   const renderHeader = () => (
     <View style={[styles.header, { backgroundColor: colors.primary }]}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={handleBackPress}
-        activeOpacity={0.7}>
-        <IconButton
-          icon="arrow-left"
-          size={24}
-          iconColor={colors.textInverse}
-        />
+      <TouchableOpacity style={styles.backButton} onPress={handleBackPress} activeOpacity={0.7}>
+        <IconButton icon="arrow-left" size={24} iconColor={colors.textInverse} />
       </TouchableOpacity>
-      
+
       <View style={styles.headerContent}>
         <Text style={[styles.headerTitle, { color: colors.textInverse }]}>
           প্রোফাইল সম্পাদনা করুন
@@ -147,53 +134,44 @@ export default function ProfileEditScreen() {
 
   const renderProfileInfo = () => (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        প্রোফাইল তথ্য
-      </Text>
-      
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>প্রোফাইল তথ্য</Text>
+
       <View style={[styles.profileCard, { backgroundColor: colors.surface }]}>
         <View style={styles.profileHeader}>
           <Avatar.Text
             size={60}
-            label={formData.name.charAt(0).toUpperCase()}
+            label={formData.name?.charAt(0).toUpperCase() || 'U'}
             style={[styles.profileAvatar, { backgroundColor: colors.primary }]}
             labelStyle={[styles.avatarText, { color: colors.textInverse }]}
           />
           <View style={styles.profileDetails}>
-            <Text style={[styles.profileName, { color: colors.text }]}>
-              {formData.name}
-            </Text>
+            <Text style={[styles.profileName, { color: colors.text }]}>{formData.name}</Text>
             <Text style={[styles.profileBusiness, { color: colors.textSecondary }]}>
               {formData.business_name || 'ব্যবসার নাম নেই'}
             </Text>
           </View>
         </View>
-        
+
         {stats && (
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
               <Text style={[styles.statValue, { color: colors.primary }]}>
                 {stats.totalCustomers}
               </Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                গ্রাহক
-              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>গ্রাহক</Text>
             </View>
             <View style={styles.statItem}>
               <Text style={[styles.statValue, { color: colors.success }]}>
                 {stats.totalTransactions}
               </Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                লেনদেন
-              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>লেনদেন</Text>
             </View>
             <View style={styles.statItem}>
               <Text style={[styles.statValue, { color: colors.info }]}>
-                {formData.currency}{stats.totalBalance}
+                {formData.currency}
+                {stats.totalBalance}
               </Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                ব্যালেন্স
-              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>ব্যালেন্স</Text>
             </View>
           </View>
         )}
@@ -203,14 +181,10 @@ export default function ProfileEditScreen() {
 
   const renderBasicInfo = () => (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        মূল তথ্য
-      </Text>
-      
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>মূল তথ্য</Text>
+
       <View style={styles.inputContainer}>
-        <Text style={[styles.inputLabel, { color: colors.text }]}>
-          নাম *
-        </Text>
+        <Text style={[styles.inputLabel, { color: colors.text }]}>নাম *</Text>
         <TextInput
           mode="outlined"
           value={formData.name}
@@ -227,9 +201,7 @@ export default function ProfileEditScreen() {
       </View>
 
       <View style={styles.inputContainer}>
-        <Text style={[styles.inputLabel, { color: colors.text }]}>
-          ফোন নম্বর
-        </Text>
+        <Text style={[styles.inputLabel, { color: colors.text }]}>ফোন নম্বর</Text>
         <TextInput
           mode="outlined"
           value={formData.phone}
@@ -247,9 +219,7 @@ export default function ProfileEditScreen() {
       </View>
 
       <View style={styles.inputContainer}>
-        <Text style={[styles.inputLabel, { color: colors.text }]}>
-          ইমেইল
-        </Text>
+        <Text style={[styles.inputLabel, { color: colors.text }]}>ইমেইল</Text>
         <TextInput
           mode="outlined"
           value={formData.email}
@@ -270,14 +240,10 @@ export default function ProfileEditScreen() {
 
   const renderBusinessInfo = () => (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        ব্যবসার তথ্য
-      </Text>
-      
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>ব্যবসার তথ্য</Text>
+
       <View style={styles.inputContainer}>
-        <Text style={[styles.inputLabel, { color: colors.text }]}>
-          ব্যবসার নাম
-        </Text>
+        <Text style={[styles.inputLabel, { color: colors.text }]}>ব্যবসার নাম</Text>
         <TextInput
           mode="outlined"
           value={formData.business_name}
@@ -294,9 +260,7 @@ export default function ProfileEditScreen() {
       </View>
 
       <View style={styles.inputContainer}>
-        <Text style={[styles.inputLabel, { color: colors.text }]}>
-          ঠিকানা
-        </Text>
+        <Text style={[styles.inputLabel, { color: colors.text }]}>ঠিকানা</Text>
         <TextInput
           mode="outlined"
           value={formData.address}
@@ -315,9 +279,7 @@ export default function ProfileEditScreen() {
       </View>
 
       <View style={styles.inputContainer}>
-        <Text style={[styles.inputLabel, { color: colors.text }]}>
-          মুদ্রা
-        </Text>
+        <Text style={[styles.inputLabel, { color: colors.text }]}>মুদ্রা</Text>
         <TextInput
           mode="outlined"
           value={formData.currency}
@@ -337,16 +299,12 @@ export default function ProfileEditScreen() {
 
   const renderSettings = () => (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        সেটিংস
-      </Text>
-      
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>সেটিংস</Text>
+
       <View style={[styles.settingsCard, { backgroundColor: colors.surface }]}>
         <View style={styles.settingItem}>
           <View style={styles.settingInfo}>
-            <Text style={[styles.settingLabel, { color: colors.text }]}>
-              ডার্ক মোড
-            </Text>
+            <Text style={[styles.settingLabel, { color: colors.text }]}>ডার্ক মোড</Text>
             <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
               অ্যাপের থিম পরিবর্তন করুন
             </Text>
@@ -360,9 +318,7 @@ export default function ProfileEditScreen() {
 
         <View style={styles.settingItem}>
           <View style={styles.settingInfo}>
-            <Text style={[styles.settingLabel, { color: colors.text }]}>
-              বিজ্ঞপ্তি
-            </Text>
+            <Text style={[styles.settingLabel, { color: colors.text }]}>বিজ্ঞপ্তি</Text>
             <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
               বিজ্ঞপ্তি সক্রিয় করুন
             </Text>
@@ -376,9 +332,7 @@ export default function ProfileEditScreen() {
 
         <View style={styles.settingItem}>
           <View style={styles.settingInfo}>
-            <Text style={[styles.settingLabel, { color: colors.text }]}>
-              স্বয়ংক্রিয় ব্যাকআপ
-            </Text>
+            <Text style={[styles.settingLabel, { color: colors.text }]}>স্বয়ংক্রিয় ব্যাকআপ</Text>
             <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
               ডেটা স্বয়ংক্রিয়ভাবে ব্যাকআপ করুন
             </Text>
@@ -400,25 +354,17 @@ export default function ProfileEditScreen() {
         onPress={handleSave}
         loading={saving}
         disabled={saving}
-        style={[
-          styles.saveButton,
-          { backgroundColor: colors.primary },
-        ]}
+        style={[styles.saveButton, { backgroundColor: colors.primary }]}
         contentStyle={styles.saveButtonContent}
         labelStyle={[styles.saveButtonText, { color: colors.textInverse }]}>
         {saving ? 'সংরক্ষণ হচ্ছে...' : 'সংরক্ষণ করুন'}
       </Button>
-      
+
       <TouchableOpacity
-        style={[
-          styles.cancelButton,
-          { borderColor: colors.border },
-        ]}
+        style={[styles.cancelButton, { borderColor: colors.border }]}
         onPress={handleBackPress}
         activeOpacity={0.7}>
-        <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>
-          বাতিল
-        </Text>
+        <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>বাতিল</Text>
       </TouchableOpacity>
     </View>
   );
@@ -427,9 +373,7 @@ export default function ProfileEditScreen() {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <RNActivityIndicator size="large" color={colors.primary} />
-        <Text style={[styles.loadingText, { color: colors.text }]}>
-          লোড হচ্ছে...
-        </Text>
+        <Text style={[styles.loadingText, { color: colors.text }]}>লোড হচ্ছে...</Text>
       </View>
     );
   }
@@ -438,7 +382,7 @@ export default function ProfileEditScreen() {
     <PageTransition>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         {renderHeader()}
-        
+
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
@@ -448,7 +392,7 @@ export default function ProfileEditScreen() {
           {renderBusinessInfo()}
           {renderSettings()}
         </ScrollView>
-        
+
         {renderActions()}
       </View>
     </PageTransition>
@@ -460,9 +404,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
+    paddingHorizontal: 10,
     flexDirection: 'row',
     alignItems: 'center',
   },

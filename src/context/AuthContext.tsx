@@ -1,50 +1,39 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { GoogleAuthService, GoogleUser, configureGoogleSignIn } from '../lib/googleAuth';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import * as SecureStore from 'expo-secure-store';
 
+// Simple user type for local authentication
+interface LocalUser {
+  id: string;
+  name: string;
+  email: string;
+  photo?: string;
+}
+
 interface AuthContextType {
-  user: GoogleUser | null;
+  user: LocalUser | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  signIn: () => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<GoogleUser | null>(null);
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<LocalUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize Google Sign-In configuration
   useEffect(() => {
-    configureGoogleSignIn();
     checkAuthState();
   }, []);
 
   const checkAuthState = async () => {
     try {
       setIsLoading(true);
-      const isSignedIn = await GoogleAuthService.isSignedIn();
-      
-      if (isSignedIn) {
-        const currentUser = await GoogleAuthService.getCurrentUser();
-        if (currentUser) {
-          setUser(currentUser);
-          // Store user data securely
-          await SecureStore.setItemAsync('user', JSON.stringify(currentUser));
-        }
-      } else {
-        // Check if we have stored user data
-        const storedUser = await SecureStore.getItemAsync('user');
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
-        }
+      const storedUser = await SecureStore.getItemAsync('user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
       }
     } catch (error) {
       console.error('Error checking auth state:', error);
@@ -53,21 +42,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const signIn = async () => {
+  const signIn = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      const result = await GoogleAuthService.signIn();
       
-      if (result.success && result.user) {
-        setUser(result.user);
-        // Store user data securely
-        await SecureStore.setItemAsync('user', JSON.stringify(result.user));
-        if (result.idToken) {
-          await SecureStore.setItemAsync('idToken', result.idToken);
-        }
-      } else {
-        throw new Error(result.error || 'Sign-in failed');
-      }
+      // Simple local authentication (you can replace this with your own logic)
+      const mockUser: LocalUser = {
+        id: 'local-user-' + Date.now(),
+        name: 'Local User',
+        email: email,
+        photo: undefined,
+      };
+      
+      setUser(mockUser);
+      await SecureStore.setItemAsync('user', JSON.stringify(mockUser));
     } catch (error) {
       console.error('Sign-in error:', error);
       throw error;
@@ -79,19 +67,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signOut = async () => {
     try {
       setIsLoading(true);
-      const result = await GoogleAuthService.signOut();
-      
-      if (result.success) {
-        setUser(null);
-        // Clear stored data
-        await SecureStore.deleteItemAsync('user');
-        await SecureStore.deleteItemAsync('idToken');
-      } else {
-        throw new Error(result.error || 'Sign-out failed');
-      }
+      setUser(null);
+      await SecureStore.deleteItemAsync('user');
     } catch (error) {
       console.error('Sign-out error:', error);
-      throw error;
+      // Even if there's an error, clear local data
+      setUser(null);
+      await SecureStore.deleteItemAsync('user');
     } finally {
       setIsLoading(false);
     }
@@ -99,10 +81,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const refreshUser = async () => {
     try {
-      const currentUser = await GoogleAuthService.getCurrentUser();
-      if (currentUser) {
-        setUser(currentUser);
-        await SecureStore.setItemAsync('user', JSON.stringify(currentUser));
+      const storedUser = await SecureStore.getItemAsync('user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
       }
     } catch (error) {
       console.error('Error refreshing user:', error);

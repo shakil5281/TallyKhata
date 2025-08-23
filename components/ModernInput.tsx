@@ -3,7 +3,7 @@ import { View, StyleSheet, ViewStyle, TextStyle } from 'react-native';
 import { TextInput, TextInputProps, HelperText } from 'react-native-paper';
 import { useTheme } from '~/context/ThemeContext';
 
-interface ModernInputProps extends Omit<TextInputProps, 'mode'> {
+interface ModernInputProps extends Omit<TextInputProps, 'mode' | 'labelStyle' | 'error'> {
   label: string;
   error?: string;
   helperText?: string;
@@ -67,7 +67,7 @@ export default function ModernInput({
         baseStyle.paddingHorizontal = spacing.md;
     }
 
-    return { ...baseStyle, ...inputStyle, ...style };
+    return { ...baseStyle, ...inputStyle, ...(style as ViewStyle) };
   };
 
   const getLabelStyle = (): TextStyle => {
@@ -86,7 +86,7 @@ export default function ModernInput({
         label={label}
         error={!!error}
         style={getInputStyle()}
-        labelStyle={getLabelStyle()}
+
         activeOutlineColor={colors.inputFocus}
         outlineColor={colors.inputBorder}
         textColor={colors.text}

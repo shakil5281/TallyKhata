@@ -28,7 +28,9 @@ const { width: screenWidth } = Dimensions.get('window');
 export default function CashboxScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedPeriod, setSelectedPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily');
+  const [selectedPeriod, setSelectedPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>(
+    'daily'
+  );
   const [stats, setStats] = useState<any>(null);
   const [dailyReport, setDailyReport] = useState<any[]>([]);
   const [monthlyReport, setMonthlyReport] = useState<any[]>([]);
@@ -77,9 +79,7 @@ export default function CashboxScreen() {
 
   const renderHeader = () => (
     <View style={[styles.header, { backgroundColor: colors.primary }]}>
-      <Text style={[styles.headerTitle, { color: colors.textInverse }]}>
-        রিপোর্ট
-      </Text>
+      <Text style={[styles.headerTitle, { color: colors.textInverse }]}>রিপোর্ট</Text>
       <Text style={[styles.headerSubtitle, { color: colors.textInverse }]}>
         আপনার ব্যবসার আর্থিক অবস্থা দেখুন
       </Text>
@@ -88,9 +88,7 @@ export default function CashboxScreen() {
 
   const renderPeriodSelector = () => (
     <View style={styles.periodContainer}>
-      <Text style={[styles.periodLabel, { color: colors.textSecondary }]}>
-        সময়কাল:
-      </Text>
+      <Text style={[styles.periodLabel, { color: colors.textSecondary }]}>সময়কাল:</Text>
       <View style={styles.periodButtons}>
         {[
           { key: 'daily', label: 'দৈনিক' },
@@ -124,35 +122,25 @@ export default function CashboxScreen() {
 
   const renderOverviewCards = () => (
     <View style={styles.overviewContainer}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        সারসংক্ষেপ
-      </Text>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>সারসংক্ষেপ</Text>
       <View style={styles.cardsRow}>
         <View style={[styles.overviewCard, { backgroundColor: colors.surface }]}>
           <Text style={[styles.cardValue, { color: colors.success }]}>
             +{stats?.totalCredit || 0}৳
           </Text>
-          <Text style={[styles.cardLabel, { color: colors.textSecondary }]}>
-            মোট পাওনা
-          </Text>
+          <Text style={[styles.cardLabel, { color: colors.textSecondary }]}>মোট পাওনা</Text>
         </View>
-        
+
         <View style={[styles.overviewCard, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.cardValue, { color: colors.error }]}>
-            {stats?.totalDebit || 0}৳
-          </Text>
-          <Text style={[styles.cardLabel, { color: colors.textSecondary }]}>
-            মোট দেনা
-          </Text>
+          <Text style={[styles.cardValue, { color: colors.error }]}>{stats?.totalDebit || 0}৳</Text>
+          <Text style={[styles.cardLabel, { color: colors.textSecondary }]}>মোট দেনা</Text>
         </View>
-        
+
         <View style={[styles.overviewCard, { backgroundColor: colors.surface }]}>
           <Text style={[styles.cardValue, { color: colors.primary }]}>
             {stats?.netBalance || 0}৳
           </Text>
-          <Text style={[styles.cardLabel, { color: colors.textSecondary }]}>
-            নিট ব্যালেন্স
-          </Text>
+          <Text style={[styles.cardLabel, { color: colors.textSecondary }]}>নিট ব্যালেন্স</Text>
         </View>
       </View>
     </View>
@@ -161,45 +149,48 @@ export default function CashboxScreen() {
   const renderRecentTransactions = () => (
     <View style={styles.transactionsContainer}>
       <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          সাম্প্রতিক লেনদেন
-        </Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>সাম্প্রতিক লেনদেন</Text>
         <TouchableOpacity onPress={handleAddTransaction} activeOpacity={0.8}>
-          <Text style={[styles.viewAllText, { color: colors.primary }]}>
-            নতুন লেনদেন
-          </Text>
+          <Text style={[styles.viewAllText, { color: colors.primary }]}>নতুন লেনদেন</Text>
         </TouchableOpacity>
       </View>
-      
-            <View style={styles.transactionsList}>
+
+      <View style={styles.transactionsList}>
         {((selectedPeriod === 'daily' ? dailyReport : monthlyReport) || []).length > 0 ? (
-          (selectedPeriod === 'daily' ? dailyReport : monthlyReport)?.slice(0, 5)?.map((transaction: any, index: number) => (
-            <View key={index} style={[styles.transactionItem, { backgroundColor: colors.surface }]}>
-              <View style={styles.transactionInfo}>
-                <Text style={[styles.transactionName, { color: colors.text }]} numberOfLines={1}>
-                  {transaction.customer_name || 'অজানা গ্রাহক'}
-                </Text>
-                <Text style={[styles.transactionDate, { color: colors.textSecondary }]}>
-                  {transaction.date ? format(new Date(transaction.date), 'dd MMM yyyy', { locale: bn }) : 'তারিখ নেই'}
-                </Text>
+          (selectedPeriod === 'daily' ? dailyReport : monthlyReport)
+            ?.slice(0, 5)
+            ?.map((transaction: any, index: number) => (
+              <View
+                key={index}
+                style={[styles.transactionItem, { backgroundColor: colors.surface }]}>
+                <View style={styles.transactionInfo}>
+                  <Text style={[styles.transactionName, { color: colors.text }]} numberOfLines={1}>
+                    {transaction.customer_name || 'অজানা গ্রাহক'}
+                  </Text>
+                  <Text style={[styles.transactionDate, { color: colors.textSecondary }]}>
+                    {transaction.date
+                      ? format(new Date(transaction.date), 'dd MMM yyyy', { locale: bn })
+                      : 'তারিখ নেই'}
+                  </Text>
+                </View>
+
+                <View style={styles.transactionAmount}>
+                  <Text
+                    style={[
+                      styles.amountText,
+                      {
+                        color: (transaction.amount || 0) >= 0 ? colors.success : colors.error,
+                      },
+                    ]}>
+                    {(transaction.amount || 0) >= 0 ? '+' : ''}
+                    {transaction.amount || 0}৳
+                  </Text>
+                  <Text style={[styles.transactionType, { color: colors.textSecondary }]}>
+                    {(transaction.amount || 0) >= 0 ? 'পাওনা' : 'দেনা'}
+                  </Text>
+                </View>
               </View>
-              
-              <View style={styles.transactionAmount}>
-                <Text
-                  style={[
-                    styles.amountText,
-                    {
-                      color: (transaction.amount || 0) >= 0 ? colors.success : colors.error,
-                    },
-                  ]}>
-                  {(transaction.amount || 0) >= 0 ? '+' : ''}{transaction.amount || 0}৳
-                </Text>
-                <Text style={[styles.transactionType, { color: colors.textSecondary }]}>
-                  {(transaction.amount || 0) >= 0 ? 'পাওনা' : 'দেনা'}
-                </Text>
-              </View>
-            </View>
-          ))
+            ))
         ) : (
           <View style={[styles.emptyState, { backgroundColor: colors.surface }]}>
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
@@ -214,19 +205,17 @@ export default function CashboxScreen() {
   const renderTopCustomers = () => (
     <View style={styles.topCustomersContainer}>
       <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          শীর্ষ গ্রাহক
-        </Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>শীর্ষ গ্রাহক</Text>
         <TouchableOpacity onPress={handleViewCustomers} activeOpacity={0.8}>
-          <Text style={[styles.viewAllText, { color: colors.primary }]}>
-            সব দেখুন
-          </Text>
+          <Text style={[styles.viewAllText, { color: colors.primary }]}>সব দেখুন</Text>
         </TouchableOpacity>
       </View>
-      
+
       <View style={styles.customersList}>
         {topCustomers.slice(0, 5).map((customer, index) => (
-          <View key={customer.id} style={[styles.customerItem, { backgroundColor: colors.surface }]}>
+          <View
+            key={customer.id}
+            style={[styles.customerItem, { backgroundColor: colors.surface }]}>
             <View style={styles.customerInfo}>
               <Text style={[styles.customerName, { color: colors.text }]} numberOfLines={1}>
                 {customer.name}
@@ -235,7 +224,7 @@ export default function CashboxScreen() {
                 {customer.phone || 'ফোন নম্বর নেই'}
               </Text>
             </View>
-            
+
             <View style={styles.customerBalance}>
               <Text
                 style={[
@@ -244,11 +233,10 @@ export default function CashboxScreen() {
                     color: customer.total_balance >= 0 ? colors.success : colors.error,
                   },
                 ]}>
-                {customer.total_balance >= 0 ? '+' : ''}{customer.total_balance}৳
+                {customer.total_balance >= 0 ? '+' : ''}
+                {customer.total_balance}৳
               </Text>
-              <Text style={[styles.balanceLabel, { color: colors.textSecondary }]}>
-                ব্যালেন্স
-              </Text>
+              <Text style={[styles.balanceLabel, { color: colors.textSecondary }]}>ব্যালেন্স</Text>
             </View>
           </View>
         ))}
@@ -259,9 +247,7 @@ export default function CashboxScreen() {
   if (loading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
-        <Text style={[styles.loadingText, { color: colors.text }]}>
-          রিপোর্ট লোড হচ্ছে...
-        </Text>
+        <Text style={[styles.loadingText, { color: colors.text }]}>রিপোর্ট লোড হচ্ছে...</Text>
       </View>
     );
   }
@@ -271,7 +257,7 @@ export default function CashboxScreen() {
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         {renderHeader()}
         {renderPeriodSelector()}
-        
+
         <ScrollView
           showsVerticalScrollIndicator={false}
           refreshControl={
@@ -283,13 +269,11 @@ export default function CashboxScreen() {
             />
           }
           contentContainerStyle={styles.scrollContent}>
-          
           {renderOverviewCards()}
           {renderRecentTransactions()}
           {renderTopCustomers()}
-          
         </ScrollView>
-        
+
         <FAB
           icon="plus"
           style={[styles.fab, { backgroundColor: colors.primary }]}
@@ -306,9 +290,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
+    paddingHorizontal: 10,
     alignItems: 'center',
   },
   headerTitle: {

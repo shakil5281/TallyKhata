@@ -134,18 +134,18 @@ export default function HomeHeader({
           </View>
           <Text style={[styles.statLabel, { color: colors.textInverse + '80' }]}>Reports</Text>
         </View>
-        
+
         <View style={styles.statDivider} />
-        
+
         <View style={styles.statItem}>
           <View style={[styles.statIcon, { backgroundColor: colors.textInverse + '20' }]}>
             <Text style={[styles.statIconText, { color: colors.textInverse }]}>👥</Text>
           </View>
           <Text style={[styles.statLabel, { color: colors.textInverse + '80' }]}>Customers</Text>
         </View>
-        
+
         <View style={styles.statDivider} />
-        
+
         <View style={styles.statItem}>
           <View style={[styles.statIcon, { backgroundColor: colors.textInverse + '20' }]}>
             <Text style={[styles.statIconText, { color: colors.textInverse }]}>💰</Text>

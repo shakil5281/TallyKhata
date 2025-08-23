@@ -10,6 +10,16 @@ import SplashScreen from '../components/SplashScreen';
 import { ToastProvider } from '~/context/ToastContext';
 import { initDB, initializeDefaultProfile } from '~/lib/db';
 
+export default function RootLayout() {
+  return (
+    <ThemeProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ThemeProvider>
+  );
+}
+
 function AppContent() {
   const { theme } = useTheme();
   const [isInitializing, setIsInitializing] = useState(true);
@@ -103,15 +113,5 @@ function AppContent() {
         </Stack>
       </ToastProvider>
     </PaperProvider>
-  );
-}
-
-export default function RootLayout() {
-  return (
-    <ThemeProvider>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </ThemeProvider>
   );
 }

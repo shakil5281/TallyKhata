@@ -1,8 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, RefreshControl } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  RefreshControl,
+} from 'react-native';
 import { IconButton, Card, Chip, SegmentedButtons } from 'react-native-paper';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { getDetailedTotals, getTotalsSummary, getTotalsByDateRange, exportTotalsData } from '~/lib/db';
+import {
+  getDetailedTotals,
+  getTotalsSummary,
+  getTotalsByDateRange,
+  exportTotalsData,
+} from '~/lib/db';
 import { useTheme } from '~/context/ThemeContext';
 
 interface CustomerTotal {
@@ -39,7 +52,7 @@ export default function TotalsDetailsScreen() {
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       // Set initial type based on route params
       if (type === 'receivable') {
         setSelectedType('receivable');
@@ -58,7 +71,7 @@ export default function TotalsDetailsScreen() {
       // Load daily totals for the selected period
       const endDate = new Date().toISOString().split('T')[0];
       let startDate = new Date();
-      
+
       switch (selectedPeriod) {
         case 'week':
           startDate.setDate(startDate.getDate() - 7);
@@ -70,12 +83,12 @@ export default function TotalsDetailsScreen() {
           startDate.setFullYear(startDate.getFullYear() - 1);
           break;
       }
-      
+
       const dailyResult = await getTotalsByDateRange(
         startDate.toISOString().split('T')[0],
         endDate
       );
-      
+
       setDailyTotals(dailyResult as DailyTotal[]);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -113,7 +126,7 @@ export default function TotalsDetailsScreen() {
     try {
       const endDate = new Date().toISOString().split('T')[0];
       let startDate = new Date();
-      
+
       switch (selectedPeriod) {
         case 'week':
           startDate.setDate(startDate.getDate() - 7);
@@ -125,20 +138,13 @@ export default function TotalsDetailsScreen() {
           startDate.setFullYear(startDate.getFullYear() - 1);
           break;
       }
-      
-      const exportData = await exportTotalsData(
-        startDate.toISOString().split('T')[0],
-        endDate
-      );
-      
+
+      const exportData = await exportTotalsData(startDate.toISOString().split('T')[0], endDate);
+
       // For now, just show success message
       // In a real app, you would save this to a file or share it
-      Alert.alert(
-        'সফল',
-        `${exportData.length} রেকর্ড এক্সপোর্ট করা হয়েছে`,
-        [{ text: 'ঠিক আছে' }]
-      );
-      
+      Alert.alert('সফল', `${Array.isArray(exportData) ? exportData.length : 0} রেকর্ড এক্সপোর্ট করা হয়েছে`, [{ text: 'ঠিক আছে' }]);
+
       console.log('Exported data:', exportData);
     } catch (error) {
       console.error('Export failed:', error);
@@ -168,7 +174,7 @@ export default function TotalsDetailsScreen() {
       return date.toLocaleDateString('bn-BD', {
         year: 'numeric',
         month: 'short',
-        day: 'numeric'
+        day: 'numeric',
       });
     } catch (error) {
       return dateString;
@@ -177,8 +183,8 @@ export default function TotalsDetailsScreen() {
 
   const getFilteredCustomers = () => {
     if (selectedType === 'all') return customers;
-    
-    return customers.filter(customer => {
+
+    return customers.filter((customer) => {
       if (selectedType === 'receivable') {
         return customer.total_receivable > 0;
       } else if (selectedType === 'payable') {
@@ -190,44 +196,26 @@ export default function TotalsDetailsScreen() {
 
   const renderHeader = () => (
     <View style={[styles.header, { backgroundColor: colors.primary }]}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={handleBackPress}
-        activeOpacity={0.7}>
-        <IconButton
-          icon="arrow-left"
-          size={24}
-          iconColor={colors.textInverse}
-        />
+      <TouchableOpacity style={styles.backButton} onPress={handleBackPress} activeOpacity={0.7}>
+        <IconButton icon="arrow-left" size={24} iconColor={colors.textInverse} />
       </TouchableOpacity>
-      
+
       <View style={styles.headerContent}>
-        <Text style={[styles.headerTitle, { color: colors.textInverse }]}>
-          মোট হিসাবের বিবরণ
-        </Text>
+        <Text style={[styles.headerTitle, { color: colors.textInverse }]}>মোট হিসাবের বিবরণ</Text>
         <Text style={[styles.headerSubtitle, { color: colors.textInverse }]}>
           পাবো এবং দেবো এর বিস্তারিত
         </Text>
       </View>
-      
-      <TouchableOpacity
-        style={styles.exportButton}
-        onPress={handleExportData}
-        activeOpacity={0.7}>
-        <IconButton
-          icon="download"
-          size={24}
-          iconColor={colors.textInverse}
-        />
+
+      <TouchableOpacity style={styles.exportButton} onPress={handleExportData} activeOpacity={0.7}>
+        <IconButton icon="download" size={24} iconColor={colors.textInverse} />
       </TouchableOpacity>
     </View>
   );
 
   const renderExplanation = () => (
     <View style={styles.explanationContainer}>
-      <Text style={[styles.explanationTitle, { color: colors.text }]}>
-        কিভাবে বুঝবেন?
-      </Text>
+      <Text style={[styles.explanationTitle, { color: colors.text }]}>কিভাবে বুঝবেন?</Text>
       <View style={styles.explanationContent}>
         <View style={styles.explanationItem}>
           <Text style={[styles.explanationIcon, { color: colors.success }]}>📥</Text>
@@ -240,7 +228,7 @@ export default function TotalsDetailsScreen() {
             </Text>
           </View>
         </View>
-        
+
         <View style={styles.explanationItem}>
           <Text style={[styles.explanationIcon, { color: colors.error }]}>📤</Text>
           <View style={styles.explanationText}>
@@ -258,52 +246,48 @@ export default function TotalsDetailsScreen() {
 
   const renderSummary = () => {
     if (!summary) return null;
-    
+
     return (
       <View style={styles.summaryContainer}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          সারসংক্ষেপ
-        </Text>
-        
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>সারসংক্ষেপ</Text>
+
         <View style={styles.statsGrid}>
           <Card style={[styles.statCard, { backgroundColor: colors.surface }]}>
             <View style={styles.statContent}>
               <Text style={[styles.statValue, { color: colors.success }]}>
                 ৳{formatAmount(summary.total_receivable)}
               </Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                মোট পাবো
-              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>মোট পাবো</Text>
               <Text style={[styles.statSubLabel, { color: colors.textSecondary }]}>
                 (পণ্য বিক্রি করেছেন)
               </Text>
             </View>
           </Card>
-          
+
           <Card style={[styles.statCard, { backgroundColor: colors.surface }]}>
             <View style={styles.statContent}>
               <Text style={[styles.statValue, { color: colors.error }]}>
                 ৳{formatAmount(summary.total_payable)}
               </Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                মোট দেবো
-              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>মোট দেবো</Text>
               <Text style={[styles.statSubLabel, { color: colors.textSecondary }]}>
                 (মূল্য পেয়েছেন)
               </Text>
             </View>
           </Card>
-          
+
           <Card style={[styles.statCard, { backgroundColor: colors.surface }]}>
             <View style={styles.statContent}>
-              <Text style={[styles.statValue, { 
-                color: summary.net_balance >= 0 ? colors.success : colors.error 
-              }]}>
+              <Text
+                style={[
+                  styles.statValue,
+                  {
+                    color: summary.net_balance >= 0 ? colors.success : colors.error,
+                  },
+                ]}>
                 {summary.net_balance >= 0 ? '+' : ''}৳{formatAmount(Math.abs(summary.net_balance))}
               </Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-                নিট ব্যালেন্স
-              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>নিট ব্যালেন্স</Text>
               <Text style={[styles.statSubLabel, { color: colors.textSecondary }]}>
                 {summary.net_balance >= 0 ? '(আপনার পাওনা)' : '(আপনার দেনা)'}
               </Text>
@@ -316,30 +300,24 @@ export default function TotalsDetailsScreen() {
 
   const renderFilters = () => (
     <View style={styles.filtersContainer}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        ফিল্টার
-      </Text>
-      
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>ফিল্টার</Text>
+
       <View style={styles.filterRow}>
-        <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>
-          ধরন:
-        </Text>
+        <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>ধরন:</Text>
         <SegmentedButtons
           value={selectedType}
           onValueChange={handleTypeChange}
           buttons={[
             { value: 'all', label: 'সব' },
             { value: 'receivable', label: 'পাবো (পণ্য বিক্রি)' },
-            { value: 'payable', label: 'দেবো (মূল্য পেয়েছেন)' }
+            { value: 'payable', label: 'দেবো (মূল্য পেয়েছেন)' },
           ]}
           style={styles.segmentedButtons}
         />
       </View>
-      
+
       <View style={styles.filterRow}>
-        <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>
-          সময়কাল:
-        </Text>
+        <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>সময়কাল:</Text>
         <SegmentedButtons
           value={selectedPeriod}
           onValueChange={handlePeriodChange}
@@ -356,7 +334,7 @@ export default function TotalsDetailsScreen() {
 
   const renderCustomerList = () => {
     const filteredCustomers = getFilteredCustomers();
-    
+
     if (filteredCustomers.length === 0) {
       return (
         <View style={styles.emptyState}>
@@ -366,13 +344,11 @@ export default function TotalsDetailsScreen() {
         </View>
       );
     }
-    
+
     return (
       <View style={styles.customersContainer}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          গ্রাহক তালিকা
-        </Text>
-        
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>গ্রাহক তালিকা</Text>
+
         {filteredCustomers.map((customer) => (
           <TouchableOpacity
             key={customer.id}
@@ -381,21 +357,19 @@ export default function TotalsDetailsScreen() {
             activeOpacity={0.8}>
             <View style={styles.customerHeader}>
               <View style={styles.customerInfo}>
-                <Text style={[styles.customerName, { color: colors.text }]}>
-                  {customer.name}
-                </Text>
+                <Text style={[styles.customerName, { color: colors.text }]}>{customer.name}</Text>
                 <Text style={[styles.customerPhone, { color: colors.textSecondary }]}>
                   {customer.phone || 'ফোন নম্বর নেই'}
                 </Text>
               </View>
-              <Chip 
-                mode="outlined" 
+              <Chip
+                mode="outlined"
                 textStyle={{ color: colors.primary }}
                 style={{ borderColor: colors.primary }}>
                 {customer.customer_type || 'নিয়মিত'}
               </Chip>
             </View>
-            
+
             <View style={styles.customerStats}>
               <View style={styles.customerStat}>
                 <Text style={[styles.customerStatLabel, { color: colors.textSecondary }]}>
@@ -405,7 +379,7 @@ export default function TotalsDetailsScreen() {
                   ৳{formatAmount(customer.total_receivable)}
                 </Text>
               </View>
-              
+
               <View style={styles.customerStat}>
                 <Text style={[styles.customerStatLabel, { color: colors.textSecondary }]}>
                   দেবো (মূল্য পেয়েছেন)
@@ -414,19 +388,24 @@ export default function TotalsDetailsScreen() {
                   ৳{formatAmount(customer.total_payable)}
                 </Text>
               </View>
-              
+
               <View style={styles.customerStat}>
                 <Text style={[styles.customerStatLabel, { color: colors.textSecondary }]}>
                   নিট ব্যালেন্স
                 </Text>
-                <Text style={[styles.customerStatValue, { 
-                  color: customer.net_balance >= 0 ? colors.success : colors.error 
-                }]}>
-                  {customer.net_balance >= 0 ? '+' : ''}৳{formatAmount(Math.abs(customer.net_balance))}
+                <Text
+                  style={[
+                    styles.customerStatValue,
+                    {
+                      color: customer.net_balance >= 0 ? colors.success : colors.error,
+                    },
+                  ]}>
+                  {customer.net_balance >= 0 ? '+' : ''}৳
+                  {formatAmount(Math.abs(customer.net_balance))}
                 </Text>
               </View>
             </View>
-            
+
             <View style={styles.customerFooter}>
               <Text style={[styles.transactionCount, { color: colors.textSecondary }]}>
                 {customer.transaction_count} লেনদেন
@@ -440,13 +419,11 @@ export default function TotalsDetailsScreen() {
 
   const renderDailyChart = () => {
     if (dailyTotals.length === 0) return null;
-    
+
     return (
       <View style={styles.chartContainer}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          দৈনিক প্রবণতা
-        </Text>
-        
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>দৈনিক প্রবণতা</Text>
+
         <View style={styles.chartData}>
           {dailyTotals.slice(0, 7).map((daily, index) => (
             <View key={index} style={styles.chartRow}>
@@ -457,15 +434,11 @@ export default function TotalsDetailsScreen() {
                 <Text style={[styles.chartValue, { color: colors.success }]}>
                   +{formatAmount(daily.daily_receivable)}৳
                 </Text>
-                <Text style={[styles.chartLabel, { color: colors.success }]}>
-                  (দিয়েছেন)
-                </Text>
+                <Text style={[styles.chartLabelItem, { color: colors.success }]}>(দিয়েছেন)</Text>
                 <Text style={[styles.chartValue, { color: colors.error }]}>
                   -{formatAmount(daily.daily_payable)}৳
                 </Text>
-                <Text style={[styles.chartLabel, { color: colors.error }]}>
-                  (পেয়েছেন)
-                </Text>
+                <Text style={[styles.chartLabelItem, { color: colors.error }]}>(পেয়েছেন)</Text>
               </View>
             </View>
           ))}
@@ -477,9 +450,7 @@ export default function TotalsDetailsScreen() {
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Text style={[styles.loadingText, { color: colors.text }]}>
-          লোড হচ্ছে...
-        </Text>
+        <Text style={[styles.loadingText, { color: colors.text }]}>লোড হচ্ছে...</Text>
       </View>
     );
   }
@@ -488,12 +459,10 @@ export default function TotalsDetailsScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {renderHeader()}
       {renderExplanation()}
-      
+
       <ScrollView
         style={styles.content}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }>
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
         {renderSummary()}
         {renderFilters()}
         {renderCustomerList()}
@@ -509,9 +478,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
+    paddingHorizontal: 10,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -730,7 +699,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     marginTop: 12,
   },
-  chartLabel: {
+  chartLabelItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,

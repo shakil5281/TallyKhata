@@ -149,17 +149,10 @@ export default function CustomerEditScreen() {
 
   const renderHeader = () => (
     <View style={[styles.header, { backgroundColor: colors.primary }]}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={handleBackPress}
-        activeOpacity={0.7}>
-        <IconButton
-          icon="arrow-left"
-          size={24}
-          iconColor={colors.textInverse}
-        />
+      <TouchableOpacity style={styles.backButton} onPress={handleBackPress} activeOpacity={0.7}>
+        <IconButton icon="arrow-left" size={24} iconColor={colors.textInverse} />
       </TouchableOpacity>
-      
+
       <View style={styles.headerContent}>
         <Text style={[styles.headerTitle, { color: colors.textInverse }]}>
           গ্রাহক সম্পাদনা করুন
@@ -173,10 +166,8 @@ export default function CustomerEditScreen() {
 
   const renderCustomerInfo = () => (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        বর্তমান তথ্য
-      </Text>
-      
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>বর্তমান তথ্য</Text>
+
       {customer && (
         <View style={[styles.customerCard, { backgroundColor: colors.surface }]}>
           <View style={styles.customerInfo}>
@@ -185,11 +176,9 @@ export default function CustomerEditScreen() {
                 {customer.name.charAt(0).toUpperCase()}
               </Text>
             </View>
-            
+
             <View style={styles.customerDetails}>
-              <Text style={[styles.customerName, { color: colors.text }]}>
-                {customer.name}
-              </Text>
+              <Text style={[styles.customerName, { color: colors.text }]}>{customer.name}</Text>
               <Text style={[styles.customerPhone, { color: colors.textSecondary }]}>
                 {customer.phone || 'ফোন নম্বর নেই'}
               </Text>
@@ -198,7 +187,7 @@ export default function CustomerEditScreen() {
               </Text>
             </View>
           </View>
-          
+
           <View style={styles.balanceInfo}>
             <Text style={[styles.balanceLabel, { color: colors.textSecondary }]}>
               বর্তমান ব্যালেন্স
@@ -210,7 +199,8 @@ export default function CustomerEditScreen() {
                   color: customer.total_balance >= 0 ? colors.success : colors.error,
                 },
               ]}>
-              {customer.total_balance >= 0 ? '+' : ''}{customer.total_balance}৳
+              {customer.total_balance >= 0 ? '+' : ''}
+              {customer.total_balance}৳
             </Text>
           </View>
         </View>
@@ -220,9 +210,7 @@ export default function CustomerEditScreen() {
 
   const renderTypeSelector = () => (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        যোগাযোগের ধরন
-      </Text>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>যোগাযোগের ধরন</Text>
       <View style={styles.typeButtonsContainer}>
         <TouchableOpacity
           style={[
@@ -244,7 +232,7 @@ export default function CustomerEditScreen() {
             গ্রাহক
           </Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity
           style={[
             styles.typeButton,
@@ -271,22 +259,14 @@ export default function CustomerEditScreen() {
 
   const renderPhotoSection = () => (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        প্রোফাইল ছবি
-      </Text>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>প্রোফাইল ছবি</Text>
       <View style={styles.photoContainer}>
         <PhotoPicker
-          photo={photo}
-          onPhotoChange={setPhoto}
+          currentPhoto={photo}
+          onPhotoSelected={setPhoto}
           size={80}
-          style={[
-            styles.photoPicker,
-            { backgroundColor: colors.surfaceSecondary },
-          ]}
         />
-        <Text style={[styles.photoHint, { color: colors.textSecondary }]}>
-          ছবি পরিবর্তন করুন
-        </Text>
+        <Text style={[styles.photoHint, { color: colors.textSecondary }]}>ছবি পরিবর্তন করুন</Text>
       </View>
     </View>
   );
@@ -294,14 +274,10 @@ export default function CustomerEditScreen() {
   const renderForm = () => (
     <View style={styles.formContainer}>
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          গ্রাহকের তথ্য
-        </Text>
-        
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>গ্রাহকের তথ্য</Text>
+
         <View style={styles.inputContainer}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>
-            নাম *
-          </Text>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>নাম *</Text>
           <TextInput
             mode="outlined"
             value={name}
@@ -323,16 +299,12 @@ export default function CustomerEditScreen() {
             error={!!errors.name}
           />
           {errors.name && (
-            <Text style={[styles.errorText, { color: colors.error }]}>
-              {errors.name}
-            </Text>
+            <Text style={[styles.errorText, { color: colors.error }]}>{errors.name}</Text>
           )}
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={[styles.inputLabel, { color: colors.text }]}>
-            ফোন নম্বর *
-          </Text>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>ফোন নম্বর *</Text>
           <TextInput
             mode="outlined"
             value={phone}
@@ -355,9 +327,7 @@ export default function CustomerEditScreen() {
             error={!!errors.phone}
           />
           {errors.phone && (
-            <Text style={[styles.errorText, { color: colors.error }]}>
-              {errors.phone}
-            </Text>
+            <Text style={[styles.errorText, { color: colors.error }]}>{errors.phone}</Text>
           )}
         </View>
       </View>
@@ -374,37 +344,24 @@ export default function CustomerEditScreen() {
         onPress={handleUpdateCustomer}
         loading={saving}
         disabled={saving}
-        style={[
-          styles.saveButton,
-          { backgroundColor: colors.primary },
-        ]}
+        style={[styles.saveButton, { backgroundColor: colors.primary }]}
         contentStyle={styles.saveButtonContent}
         labelStyle={[styles.saveButtonText, { color: colors.textInverse }]}>
         {saving ? 'আপডেট হচ্ছে...' : 'আপডেট করুন'}
       </Button>
-      
+
       <TouchableOpacity
-        style={[
-          styles.deleteButton,
-          { borderColor: colors.error },
-        ]}
+        style={[styles.deleteButton, { borderColor: colors.error }]}
         onPress={handleDeleteCustomer}
         activeOpacity={0.7}>
-        <Text style={[styles.deleteButtonText, { color: colors.error }]}>
-          গ্রাহক মুছুন
-        </Text>
+        <Text style={[styles.deleteButtonText, { color: colors.error }]}>গ্রাহক মুছুন</Text>
       </TouchableOpacity>
-      
+
       <TouchableOpacity
-        style={[
-          styles.cancelButton,
-          { borderColor: colors.border },
-        ]}
+        style={[styles.cancelButton, { borderColor: colors.border }]}
         onPress={handleBackPress}
         activeOpacity={0.7}>
-        <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>
-          বাতিল
-        </Text>
+        <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>বাতিল</Text>
       </TouchableOpacity>
     </View>
   );
@@ -413,9 +370,7 @@ export default function CustomerEditScreen() {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <RNActivityIndicator size="large" color={colors.primary} />
-        <Text style={[styles.loadingText, { color: colors.text }]}>
-          লোড হচ্ছে...
-        </Text>
+        <Text style={[styles.loadingText, { color: colors.text }]}>লোড হচ্ছে...</Text>
       </View>
     );
   }
@@ -424,7 +379,7 @@ export default function CustomerEditScreen() {
     <PageTransition>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         {renderHeader()}
-        
+
         <KeyboardAvoidingView
           style={styles.keyboardContainer}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -437,7 +392,7 @@ export default function CustomerEditScreen() {
             {renderForm()}
           </ScrollView>
         </KeyboardAvoidingView>
-        
+
         {renderActions()}
       </View>
     </PageTransition>
@@ -449,9 +404,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
+    paddingHorizontal: 10,
     flexDirection: 'row',
     alignItems: 'center',
   },

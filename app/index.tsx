@@ -65,7 +65,10 @@ export default function TabLayout() {
           ]}
           activeColor={colors.bottomNavActive}
           inactiveColor={colors.bottomNavInactive}
-          activeIndicatorStyle={[styles.activeIndicator, { backgroundColor: colors.primary + '20' }]}
+          activeIndicatorStyle={[
+            styles.activeIndicator,
+            { backgroundColor: colors.primary + '20' },
+          ]}
           style={styles.bottomNavigation}
         />
       </View>

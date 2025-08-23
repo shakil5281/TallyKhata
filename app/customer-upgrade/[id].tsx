@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  TextInput,
+} from 'react-native';
 import { IconButton, Card, Chip } from 'react-native-paper';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { getCustomerById, updateCustomer } from '~/lib/db';
@@ -39,14 +47,9 @@ export default function CustomerUpgradeScreen() {
       id: 'premium',
       name: 'প্রিমিয়াম গ্রাহক',
       description: 'উচ্চমানের সেবা এবং বিশেষ সুবিধা',
-      benefits: [
-        'অগ্রাধিকার সেবা',
-        'বিশেষ ছাড়',
-        'দ্রুত লেনদেন প্রক্রিয়াকরণ',
-        '২৪/৭ সেবা'
-      ],
+      benefits: ['অগ্রাধিকার সেবা', 'বিশেষ ছাড়', 'দ্রুত লেনদেন প্রক্রিয়াকরণ', '২৪/৭ সেবা'],
       price: 500,
-      color: '#FFD700'
+      color: '#FFD700',
     },
     {
       id: 'vip',
@@ -56,10 +59,10 @@ export default function CustomerUpgradeScreen() {
         'সর্বোচ্চ অগ্রাধিকার সেবা',
         'বিশেষ ছাড় এবং অফার',
         'ব্যক্তিগত অ্যাকাউন্ট ম্যানেজার',
-        'বিশেষ ইভেন্টে আমন্ত্রণ'
+        'বিশেষ ইভেন্টে আমন্ত্রণ',
       ],
       price: 1000,
-      color: '#C0C0C0'
+      color: '#C0C0C0',
     },
     {
       id: 'enterprise',
@@ -69,11 +72,11 @@ export default function CustomerUpgradeScreen() {
         'ব্যবসায়িক অগ্রাধিকার সেবা',
         'বাল্ক লেনদেন সুবিধা',
         'বিশেষ রিপোর্টিং',
-        'ডেডিকেটেড সাপোর্ট'
+        'ডেডিকেটেড সাপোর্ট',
       ],
       price: 2000,
-      color: '#CD7F32'
-    }
+      color: '#CD7F32',
+    },
   ];
 
   const loadData = useCallback(async () => {
@@ -109,19 +112,19 @@ export default function CustomerUpgradeScreen() {
       return;
     }
 
-    const upgrade = upgradeOptions.find(u => u.id === selectedUpgrade);
+    const upgrade = upgradeOptions.find((u) => u.id === selectedUpgrade);
     if (!upgrade) {
       Alert.alert('ত্রুটি', 'অনুগ্রহ করে একটি বৈধ আপগ্রেড অপশন নির্বাচন করুন');
       return;
     }
 
     setUpgrading(true);
-    
+
     try {
       // Update customer type
       const success = await updateCustomer(customer.id, {
         ...customer,
-        type: upgrade.id
+        type: upgrade.id,
       });
 
       if (success) {
@@ -129,14 +132,14 @@ export default function CustomerUpgradeScreen() {
           'সফল আপগ্রেড',
           `${customer.name} কে ${upgrade.name} হিসেবে আপগ্রেড করা হয়েছে!`,
           [
-            { 
-              text: 'ঠিক আছে', 
+            {
+              text: 'ঠিক আছে',
               onPress: () => {
                 setSelectedUpgrade(null);
                 setCustomNote('');
                 loadData(); // Refresh data
-              }
-            }
+              },
+            },
           ]
         );
       } else {
@@ -152,12 +155,12 @@ export default function CustomerUpgradeScreen() {
 
   const getCurrentUpgradeLevel = () => {
     if (!customer) return null;
-    
-    const currentUpgrade = upgradeOptions.find(u => u.id === customer.type);
+
+    const currentUpgrade = upgradeOptions.find((u) => u.id === customer.type);
     if (currentUpgrade) {
       return currentUpgrade;
     }
-    
+
     // Default customer type
     return {
       id: 'regular',
@@ -165,27 +168,18 @@ export default function CustomerUpgradeScreen() {
       description: 'সাধারণ সেবা এবং সুবিধা',
       benefits: ['মৌলিক সেবা', 'সাধারণ ছাড়'],
       price: 0,
-      color: '#6B7280'
+      color: '#6B7280',
     };
   };
 
   const renderHeader = () => (
     <View style={[styles.header, { backgroundColor: colors.primary }]}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={handleBackPress}
-        activeOpacity={0.7}>
-        <IconButton
-          icon="arrow-left"
-          size={24}
-          iconColor={colors.textInverse}
-        />
+      <TouchableOpacity style={styles.backButton} onPress={handleBackPress} activeOpacity={0.7}>
+        <IconButton icon="arrow-left" size={24} iconColor={colors.textInverse} />
       </TouchableOpacity>
-      
+
       <View style={styles.headerContent}>
-        <Text style={[styles.headerTitle, { color: colors.textInverse }]}>
-          গ্রাহক আপগ্রেড
-        </Text>
+        <Text style={[styles.headerTitle, { color: colors.textInverse }]}>গ্রাহক আপগ্রেড</Text>
         <Text style={[styles.headerSubtitle, { color: colors.textInverse }]}>
           {customer?.name || 'গ্রাহক'}
         </Text>
@@ -195,31 +189,25 @@ export default function CustomerUpgradeScreen() {
 
   const renderCurrentStatus = () => {
     const currentUpgrade = getCurrentUpgradeLevel();
-    
+
     return (
       <View style={styles.currentStatusContainer}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          বর্তমান অবস্থা
-        </Text>
-        
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>বর্তমান অবস্থা</Text>
+
         <Card style={[styles.currentStatusCard, { backgroundColor: colors.surface }]}>
           <View style={styles.currentStatusContent}>
             <View style={[styles.statusBadge, { backgroundColor: currentUpgrade?.color }]}>
-              <Text style={styles.statusBadgeText}>
-                {currentUpgrade?.name}
-              </Text>
+              <Text style={styles.statusBadgeText}>{currentUpgrade?.name}</Text>
             </View>
-            
+
             <Text style={[styles.statusDescription, { color: colors.textSecondary }]}>
               {currentUpgrade?.description}
             </Text>
-            
+
             <View style={styles.benefitsList}>
               {currentUpgrade?.benefits.map((benefit, index) => (
                 <View key={index} style={styles.benefitItem}>
-                  <Text style={[styles.benefitText, { color: colors.text }]}>
-                    • {benefit}
-                  </Text>
+                  <Text style={[styles.benefitText, { color: colors.text }]}>• {benefit}</Text>
                 </View>
               ))}
             </View>
@@ -231,14 +219,12 @@ export default function CustomerUpgradeScreen() {
 
   const renderUpgradeOptions = () => (
     <View style={styles.upgradeOptionsContainer}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        আপগ্রেড অপশন
-      </Text>
-      
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>আপগ্রেড অপশন</Text>
+
       {upgradeOptions.map((option) => {
         const isCurrent = customer?.type === option.id;
         const isSelected = selectedUpgrade === option.id;
-        
+
         return (
           <TouchableOpacity
             key={option.id}
@@ -246,56 +232,47 @@ export default function CustomerUpgradeScreen() {
               styles.upgradeOptionCard,
               { backgroundColor: colors.surface },
               isCurrent && styles.currentUpgradeCard,
-              isSelected && styles.selectedUpgradeCard
+              isSelected && styles.selectedUpgradeCard,
             ]}
             onPress={() => !isCurrent && setSelectedUpgrade(option.id)}
             activeOpacity={0.7}
             disabled={isCurrent}>
-            
             <View style={styles.upgradeOptionHeader}>
               <View style={[styles.upgradeBadge, { backgroundColor: option.color }]}>
-                <Text style={styles.upgradeBadgeText}>
-                  {option.name}
-                </Text>
+                <Text style={styles.upgradeBadgeText}>{option.name}</Text>
               </View>
-              
+
               {isCurrent && (
-                <Chip 
-                  mode="outlined" 
+                <Chip
+                  mode="outlined"
                   textStyle={{ color: colors.primary }}
                   style={{ borderColor: colors.primary }}>
                   বর্তমান
                 </Chip>
               )}
-              
+
               {!isCurrent && (
                 <Text style={[styles.upgradePrice, { color: colors.primary }]}>
                   ৳{option.price}
                 </Text>
               )}
             </View>
-            
+
             <Text style={[styles.upgradeDescription, { color: colors.textSecondary }]}>
               {option.description}
             </Text>
-            
+
             <View style={styles.benefitsList}>
               {option.benefits.map((benefit, index) => (
                 <View key={index} style={styles.benefitItem}>
-                  <Text style={[styles.benefitText, { color: colors.text }]}>
-                    • {benefit}
-                  </Text>
+                  <Text style={[styles.benefitText, { color: colors.text }]}>• {benefit}</Text>
                 </View>
               ))}
             </View>
-            
+
             {isSelected && (
               <View style={styles.selectedIndicator}>
-                <IconButton
-                  icon="check-circle"
-                  size={24}
-                  iconColor={colors.success}
-                />
+                <IconButton icon="check-circle" size={24} iconColor={colors.success} />
               </View>
             )}
           </TouchableOpacity>
@@ -306,36 +283,35 @@ export default function CustomerUpgradeScreen() {
 
   const renderUpgradeForm = () => {
     if (!selectedUpgrade) return null;
-    
-    const upgrade = upgradeOptions.find(u => u.id === selectedUpgrade);
+
+    const upgrade = upgradeOptions.find((u) => u.id === selectedUpgrade);
     if (!upgrade) return null;
-    
+
     return (
       <View style={styles.upgradeFormContainer}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          আপগ্রেড ফর্ম
-        </Text>
-        
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>আপগ্রেড ফর্ম</Text>
+
         <Card style={[styles.upgradeFormCard, { backgroundColor: colors.surface }]}>
           <View style={styles.formContent}>
             <Text style={[styles.selectedUpgradeText, { color: colors.text }]}>
               নির্বাচিত: {upgrade.name}
             </Text>
-            
+
             <Text style={[styles.upgradePriceText, { color: colors.primary }]}>
               মূল্য: ৳{upgrade.price}
             </Text>
-            
+
             <View style={styles.noteContainer}>
-              <Text style={[styles.noteLabel, { color: colors.text }]}>
-                নোট (ঐচ্ছিক)
-              </Text>
+              <Text style={[styles.noteLabel, { color: colors.text }]}>নোট (ঐচ্ছিক)</Text>
               <TextInput
-                style={[styles.noteInput, { 
-                  backgroundColor: colors.surfaceSecondary,
-                  color: colors.text,
-                  borderColor: colors.border
-                }]}
+                style={[
+                  styles.noteInput,
+                  {
+                    backgroundColor: colors.surfaceSecondary,
+                    color: colors.text,
+                    borderColor: colors.border,
+                  },
+                ]}
                 value={customNote}
                 onChangeText={setCustomNote}
                 placeholder="আপগ্রেড সম্পর্কে নোট দিন"
@@ -344,12 +320,12 @@ export default function CustomerUpgradeScreen() {
                 numberOfLines={3}
               />
             </View>
-            
+
             <TouchableOpacity
               style={[
                 styles.upgradeButton,
                 { backgroundColor: colors.primary },
-                upgrading && { opacity: 0.7 }
+                upgrading && { opacity: 0.7 },
               ]}
               onPress={handleUpgrade}
               disabled={upgrading}
@@ -367,9 +343,7 @@ export default function CustomerUpgradeScreen() {
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Text style={[styles.loadingText, { color: colors.text }]}>
-          লোড হচ্ছে...
-        </Text>
+        <Text style={[styles.loadingText, { color: colors.text }]}>লোড হচ্ছে...</Text>
       </View>
     );
   }
@@ -377,7 +351,7 @@ export default function CustomerUpgradeScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {renderHeader()}
-      
+
       <ScrollView style={styles.content}>
         {renderCurrentStatus()}
         {renderUpgradeOptions()}
@@ -392,9 +366,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
+    paddingHorizontal: 10,
     flexDirection: 'row',
     alignItems: 'center',
   },

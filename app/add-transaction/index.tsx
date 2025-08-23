@@ -111,17 +111,10 @@ export default function AddTransactionScreen() {
 
   const renderHeader = () => (
     <View style={[styles.header, { backgroundColor: colors.primary }]}>
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={handleBackPress}
-        activeOpacity={0.7}>
-        <IconButton
-          icon="arrow-left"
-          size={24}
-          iconColor={colors.textInverse}
-        />
+      <TouchableOpacity style={styles.backButton} onPress={handleBackPress} activeOpacity={0.7}>
+        <IconButton icon="arrow-left" size={24} iconColor={colors.textInverse} />
       </TouchableOpacity>
-      
+
       <View style={styles.headerContent}>
         <Text style={[styles.headerTitle, { color: colors.textInverse }]}>
           নতুন লেনদেন যোগ করুন
@@ -135,10 +128,8 @@ export default function AddTransactionScreen() {
 
   const renderCustomerInfo = () => (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        গ্রাহকের তথ্য
-      </Text>
-      
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>গ্রাহকের তথ্য</Text>
+
       {customer && (
         <View style={[styles.customerCard, { backgroundColor: colors.surface }]}>
           <View style={styles.customerInfo}>
@@ -147,11 +138,9 @@ export default function AddTransactionScreen() {
                 {customer.name.charAt(0).toUpperCase()}
               </Text>
             </View>
-            
+
             <View style={styles.customerDetails}>
-              <Text style={[styles.customerName, { color: colors.text }]}>
-                {customer.name}
-              </Text>
+              <Text style={[styles.customerName, { color: colors.text }]}>{customer.name}</Text>
               <Text style={[styles.customerPhone, { color: colors.textSecondary }]}>
                 {customer.phone || 'ফোন নম্বর নেই'}
               </Text>
@@ -160,7 +149,7 @@ export default function AddTransactionScreen() {
               </Text>
             </View>
           </View>
-          
+
           <View style={styles.balanceInfo}>
             <Text style={[styles.balanceLabel, { color: colors.textSecondary }]}>
               বর্তমান ব্যালেন্স
@@ -172,7 +161,8 @@ export default function AddTransactionScreen() {
                   color: customer.total_balance >= 0 ? colors.success : colors.error,
                 },
               ]}>
-              {customer.total_balance >= 0 ? '+' : ''}{customer.total_balance}৳
+              {customer.total_balance >= 0 ? '+' : ''}
+              {customer.total_balance}৳
             </Text>
           </View>
         </View>
@@ -182,10 +172,8 @@ export default function AddTransactionScreen() {
 
   const renderTransactionType = () => (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        লেনদেনের ধরন
-      </Text>
-      
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>লেনদেনের ধরন</Text>
+
       <View style={styles.typeButtonsContainer}>
         <TouchableOpacity
           style={[
@@ -216,7 +204,7 @@ export default function AddTransactionScreen() {
             গ্রাহক থেকে টাকা পাবেন
           </Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity
           style={[
             styles.typeButton,
@@ -252,14 +240,10 @@ export default function AddTransactionScreen() {
 
   const renderTransactionForm = () => (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        লেনদেনের বিবরণ
-      </Text>
-      
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>লেনদেনের বিবরণ</Text>
+
       <View style={styles.inputContainer}>
-        <Text style={[styles.inputLabel, { color: colors.text }]}>
-          টাকার পরিমাণ *
-        </Text>
+        <Text style={[styles.inputLabel, { color: colors.text }]}>টাকার পরিমাণ *</Text>
         <TextInput
           mode="outlined"
           value={amount}
@@ -283,16 +267,12 @@ export default function AddTransactionScreen() {
           left={<TextInput.Icon icon="currency-bdt" />}
         />
         {errors.amount && (
-          <Text style={[styles.errorText, { color: colors.error }]}>
-            {errors.amount}
-          </Text>
+          <Text style={[styles.errorText, { color: colors.error }]}>{errors.amount}</Text>
         )}
       </View>
 
       <View style={styles.inputContainer}>
-        <Text style={[styles.inputLabel, { color: colors.text }]}>
-          নোট (ঐচ্ছিক)
-        </Text>
+        <Text style={[styles.inputLabel, { color: colors.text }]}>নোট (ঐচ্ছিক)</Text>
         <TextInput
           mode="outlined"
           value={note}
@@ -307,10 +287,7 @@ export default function AddTransactionScreen() {
               borderColor: colors.border,
             },
           ]}
-          outlineStyle={[
-            styles.inputOutline,
-            { borderColor: colors.border },
-          ]}
+          outlineStyle={[styles.inputOutline, { borderColor: colors.border }]}
           contentStyle={[styles.inputContent, { color: colors.text }]}
           placeholderTextColor={colors.textSecondary}
         />
@@ -325,25 +302,17 @@ export default function AddTransactionScreen() {
         onPress={handleSaveTransaction}
         loading={saving}
         disabled={saving}
-        style={[
-          styles.saveButton,
-          { backgroundColor: colors.primary },
-        ]}
+        style={[styles.saveButton, { backgroundColor: colors.primary }]}
         contentStyle={styles.saveButtonContent}
         labelStyle={[styles.saveButtonText, { color: colors.textInverse }]}>
         {saving ? 'সংরক্ষণ হচ্ছে...' : 'লেনদেন সংরক্ষণ করুন'}
       </Button>
-      
+
       <TouchableOpacity
-        style={[
-          styles.cancelButton,
-          { borderColor: colors.border },
-        ]}
+        style={[styles.cancelButton, { borderColor: colors.border }]}
         onPress={handleBackPress}
         activeOpacity={0.7}>
-        <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>
-          বাতিল
-        </Text>
+        <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>বাতিল</Text>
       </TouchableOpacity>
     </View>
   );
@@ -352,9 +321,7 @@ export default function AddTransactionScreen() {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <RNActivityIndicator size="large" color={colors.primary} />
-        <Text style={[styles.loadingText, { color: colors.text }]}>
-          লোড হচ্ছে...
-        </Text>
+        <Text style={[styles.loadingText, { color: colors.text }]}>লোড হচ্ছে...</Text>
       </View>
     );
   }
@@ -363,7 +330,7 @@ export default function AddTransactionScreen() {
     <PageTransition>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         {renderHeader()}
-        
+
         <KeyboardAvoidingView
           style={styles.keyboardContainer}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -377,7 +344,7 @@ export default function AddTransactionScreen() {
             {renderTransactionForm()}
           </ScrollView>
         </KeyboardAvoidingView>
-        
+
         {renderActions()}
       </View>
     </PageTransition>
@@ -389,9 +356,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
+    paddingHorizontal: 10,
     flexDirection: 'row',
     alignItems: 'center',
   },

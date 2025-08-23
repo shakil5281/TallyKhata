@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, Image, StyleSheet, Alert } from 'react-native';
 import { useAuth } from '../src/context/AuthContext';
 import ModernButton from './ModernButton';
 
@@ -11,40 +11,36 @@ export const UserProfile: React.FC = () => {
   }
 
   const handleSignOut = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: signOut,
-        },
-      ]
-    );
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: signOut,
+      },
+    ]);
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.profileSection}>
-        {user.user.photo ? (
-          <Image source={{ uri: user.user.photo }} style={styles.profileImage} />
+        {user.photo ? (
+          <Image source={{ uri: user.photo }} style={styles.profileImage} />
         ) : (
           <View style={styles.profilePlaceholder}>
             <Text style={styles.profilePlaceholderText}>
-              {user.user.name ? user.user.name.charAt(0).toUpperCase() : 'U'}
+              {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
             </Text>
           </View>
         )}
-        
+
         <View style={styles.userInfo}>
-          <Text style={styles.userName}>{user.user.name || 'User'}</Text>
-          <Text style={styles.userEmail}>{user.user.email || 'No email'}</Text>
-          <Text style={styles.userId}>ID: {user.user.id}</Text>
+          <Text style={styles.userName}>{user.name || 'User'}</Text>
+          <Text style={styles.userEmail}>{user.email || 'No email'}</Text>
+          <Text style={styles.userId}>ID: {user.id}</Text>
         </View>
       </View>
 
@@ -54,8 +50,7 @@ export const UserProfile: React.FC = () => {
           disabled={isLoading}
           style={styles.signOutButton}
           labelStyle={styles.signOutButtonText}
-          variant="error"
-        >
+          variant="error">
           Sign Out
         </ModernButton>
       </View>

@@ -13,6 +13,7 @@ import { Surface, IconButton, Avatar, Chip, FAB, Card } from 'react-native-paper
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '~/context/ThemeContext';
 import { getCustomers, getUserProfile, getDashboardStats, getTotalsSummary } from '~/lib/db';
+import PageTransition from '../../components/PageTransition';
 
 interface Customer {
   id: number;
@@ -22,7 +23,6 @@ interface Customer {
   photo?: string;
   total_balance: number;
 }
-import PageTransition from '../../components/PageTransition';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -50,11 +50,11 @@ export default function HomeScreen() {
       setCustomers(customersResult as Customer[]);
       setProfile(profileResult);
       setStats(statsResult);
-      
+
       // Merge totals with stats
       setStats({
         ...statsResult,
-        ...totalsResult
+        ...totalsResult,
       });
     } catch (error) {
       console.error('Error loading data:', error);
@@ -149,9 +149,7 @@ export default function HomeScreen() {
           <View style={[styles.statIcon, { backgroundColor: colors.secondary + '20' }]}>
             <Text style={styles.statIconText}>👥</Text>
           </View>
-          <Text style={[styles.statValue, { color: colors.text }]}>
-            {customers.length || 0}
-          </Text>
+          <Text style={[styles.statValue, { color: colors.text }]}>{customers.length || 0}</Text>
           <Text style={[styles.statLabel, { color: colors.textSecondary }]}>গ্রাহক</Text>
         </Surface>
 
@@ -180,58 +178,57 @@ export default function HomeScreen() {
 
   const renderTotalsSection = () => {
     const { total_receivable, total_payable, net_balance } = stats;
-    
+
     return (
       <View style={styles.totalsSection}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          মোট হিসাব
-        </Text>
-        
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>মোট হিসাব</Text>
+
         <View style={styles.totalsGrid}>
           <Card style={[styles.totalCard, { backgroundColor: colors.surface }]}>
             <View style={styles.totalContent}>
               <Text style={[styles.totalValue, { color: colors.success }]}>
                 ৳{formatAmount(total_receivable)}
               </Text>
-              <Text style={[styles.totalLabel, { color: colors.textSecondary }]}>
-                মোট পাবো
-              </Text>
+              <Text style={[styles.totalLabel, { color: colors.textSecondary }]}>মোট পাবো</Text>
               <Text style={[styles.totalSubLabel, { color: colors.textSecondary }]}>
                 (পণ্য বিক্রি করেছেন)
               </Text>
             </View>
           </Card>
-          
+
           <Card style={[styles.totalCard, { backgroundColor: colors.surface }]}>
             <View style={styles.totalContent}>
               <Text style={[styles.totalValue, { color: colors.error }]}>
                 ৳{formatAmount(total_payable)}
               </Text>
-              <Text style={[styles.totalLabel, { color: colors.textSecondary }]}>
-                মোট দেবো
-              </Text>
+              <Text style={[styles.totalLabel, { color: colors.textSecondary }]}>মোট দেবো</Text>
               <Text style={[styles.totalSubLabel, { color: colors.textSecondary }]}>
                 (মূল্য পেয়েছেন)
               </Text>
             </View>
           </Card>
         </View>
-        
+
         <Card style={[styles.balanceCard, { backgroundColor: colors.surface }]}>
           <View style={styles.balanceContent}>
             <Text style={[styles.balanceLabel, { color: colors.textSecondary }]}>
               নিট ব্যালেন্স
             </Text>
-            <Text style={[styles.balanceValue, { 
-              color: net_balance >= 0 ? colors.success : colors.error 
-            }]}>
-              {net_balance >= 0 ? '+' : ''}৳{formatAmount(Math.abs(net_balance))}
+            <Text
+              style={[
+                styles.balanceValue,
+                {
+                  color: net_balance > 0 ? colors.success : net_balance < 0 ? colors.error : colors.textSecondary,
+                },
+              ]}>
+              {net_balance > 0 ? '+' : ''}৳{formatAmount(Math.abs(net_balance))}
             </Text>
             <Text style={[styles.balanceSubLabel, { color: colors.textSecondary }]}>
-              {net_balance >= 0 
-                ? `আপনি ${formatAmount(net_balance)}৳ পাবেন` 
-                : `আপনার ${formatAmount(Math.abs(net_balance))}৳ দেনা আছে`
-              }
+              {net_balance > 0
+                ? `আপনি ${formatAmount(net_balance)}৳ পাবেন`
+                : net_balance < 0
+                ? `আপনার ${formatAmount(Math.abs(net_balance))}৳ দেনা আছে`
+                : 'আপনার কোন দেনা-পাওনা নেই'}
             </Text>
           </View>
         </Card>
@@ -302,7 +299,8 @@ export default function HomeScreen() {
               key={customer.id}
               style={[styles.customerCard, { backgroundColor: colors.surface }]}
               onPress={() => router.push(`/transaction/${customer.id}`)}
-              activeOpacity={0.8}>
+              activeOpacity={0.8}
+              >
               <View style={styles.customerCardContent}>
                 <Avatar.Text
                   size={40}
@@ -318,16 +316,16 @@ export default function HomeScreen() {
                     {customer.phone || 'ফোন নম্বর নেই'}
                   </Text>
                 </View>
-                <Chip
-                  mode="outlined"
-                  textStyle={[
+                <Text
+                  style={[
                     styles.balanceChip,
                     {
-                      color: customer.total_balance >= 0 ? colors.success : colors.error,
+                      color: customer.total_balance > 0 ? colors.success : customer.total_balance < 0 ? colors.error : colors.textSecondary,
                     },
                   ]}>
-                  {customer.total_balance >= 0 ? '+' : ''}{customer.total_balance}৳
-                </Chip>
+                  {customer.total_balance > 0 ? '+' : ''}
+                  {customer.total_balance}৳
+                </Text>
               </View>
             </TouchableOpacity>
           ))}
@@ -359,9 +357,7 @@ export default function HomeScreen() {
         <ScrollView
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }>
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
           {renderHeader()}
           {renderQuickStats()}
           {renderTotalsSection()}
@@ -372,7 +368,7 @@ export default function HomeScreen() {
 
         <FAB
           icon="plus"
-          style={[styles.fab, { backgroundColor: colors.secondary }]}
+          style={[styles.fab, { backgroundColor: colors.primary }]}
           onPress={handleAddCustomer}
           color={colors.textInverse}
         />
@@ -515,7 +511,7 @@ const styles = StyleSheet.create({
   },
   customerCard: {
     borderRadius: 16,
-    elevation: 2,
+    elevation: 0,
     overflow: 'hidden',
   },
   customerCardContent: {
@@ -545,7 +541,7 @@ const styles = StyleSheet.create({
     color: 'rgba(0, 0, 0, 0.6)',
   },
   balanceChip: {
-    fontSize: 12,
+    fontSize: 20,
     fontWeight: '600',
     alignSelf: 'flex-end',
   },
@@ -570,7 +566,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     margin: 16,
     right: 0,
-    bottom: 80,
+    bottom: 20,
   },
   loadingContainer: {
     flex: 1,
